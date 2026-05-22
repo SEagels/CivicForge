@@ -153,7 +153,7 @@ See [docs/backup-restore.md](docs/backup-restore.md) for details.
 
 ## Current Phase / 当前阶段
 
-Phase one foundation:
+Completed phase-one foundation:
 
 - Git repository initialized.
 - Tauri + React + TypeScript + Vite scaffold added.
@@ -162,4 +162,11 @@ Phase one foundation:
 - Vitest coverage added for taxonomy and schema.
 - Bilingual documentation added.
 
-阶段一目标是工程基础与数据库落地，不包含素材编辑、Milkdown 编辑器、复习界面和 Rewrite 工作坊。这些会在后续阶段实现。
+Completed phase-two slice:
+
+- In-memory material library shell.
+- Three-column desktop study layout.
+- Material creation, selection, editing, metadata updates, review toggle, and archive action.
+- Milkdown CommonMark editor integration with a Markdown source fallback.
+
+阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程，后续阶段会接入 SQLite 持久化、FTS5 搜索、复习调度和 Rewrite 工作坊。

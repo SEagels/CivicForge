@@ -12,6 +12,11 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@milkdown/core": "^7.21.1",
+    "@milkdown/plugin-listener": "^7.21.1",
+    "@milkdown/preset-commonmark": "^7.21.1",
+    "@milkdown/react": "^7.21.1",
+    "@milkdown/theme-nord": "^7.21.1",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
