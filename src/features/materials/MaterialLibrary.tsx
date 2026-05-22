@@ -3,6 +3,13 @@ import { MarkdownEditor } from "../editor/MarkdownEditor";
 import { MaterialInspector } from "./MaterialInspector";
 import { MaterialList } from "./MaterialList";
 import {
+  DEFAULT_MATERIAL_FILTERS,
+  filterMaterials,
+  getAvailableTags,
+  hasActiveFilters,
+  type MaterialFilters,
+} from "./materialFilters";
+import {
   archiveSelectedMaterial,
   createInitialMaterialState,
   createMaterial,
@@ -15,11 +22,19 @@ import {
 
 export function MaterialLibrary() {
   const [state, setState] = useState(createInitialMaterialState);
+  const [filters, setFilters] = useState<MaterialFilters>(DEFAULT_MATERIAL_FILTERS);
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
+  const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
+  const availableTags = useMemo(() => getAvailableTags(activeMaterials), [activeMaterials]);
   const selectedMaterial = useMemo(() => getSelectedMaterial(state), [state]);
+  const filtersActive = hasActiveFilters(filters);
 
   const updateSelected = useCallback((patch: MaterialPatch) => {
     setState((current) => updateSelectedMaterial(current, patch));
+  }, []);
+
+  const updateFilters = useCallback((patch: Partial<MaterialFilters>) => {
+    setFilters((current) => ({ ...current, ...patch }));
   }, []);
 
   const updateContent = useCallback(
@@ -28,6 +43,11 @@ export function MaterialLibrary() {
     },
     [updateSelected],
   );
+
+  const createVisibleMaterial = useCallback(() => {
+    setFilters(DEFAULT_MATERIAL_FILTERS);
+    setState((current) => createMaterial(current));
+  }, []);
 
   return (
     <main className="desktop-shell">
@@ -45,10 +65,16 @@ export function MaterialLibrary() {
       </aside>
 
       <MaterialList
-        materials={activeMaterials}
+        materials={filteredMaterials}
         selectedId={state.selectedId}
+        filters={filters}
+        totalCount={activeMaterials.length}
+        tags={availableTags}
+        hasActiveFilters={filtersActive}
         onSelect={(id) => setState((current) => selectMaterial(current, id))}
-        onCreate={() => setState((current) => createMaterial(current))}
+        onCreate={createVisibleMaterial}
+        onFiltersChange={updateFilters}
+        onClearFilters={() => setFilters(DEFAULT_MATERIAL_FILTERS)}
       />
 
       <section className="editor-pane" aria-label="编辑器">
@@ -69,7 +95,7 @@ export function MaterialLibrary() {
         ) : (
           <div className="empty-state">
             <h1>没有可编辑素材</h1>
-            <button type="button" className="primary-button" onClick={() => setState((current) => createMaterial(current))}>
+            <button type="button" className="primary-button" onClick={createVisibleMaterial}>
               新建素材
             </button>
           </div>

@@ -1,0 +1,49 @@
+import { describe, expect, it } from "vitest";
+import { createInitialMaterialState, getActiveMaterials } from "./materialModel";
+import {
+  DEFAULT_MATERIAL_FILTERS,
+  filterMaterials,
+  getAvailableTags,
+  hasActiveFilters,
+} from "./materialFilters";
+
+const materials = getActiveMaterials(createInitialMaterialState());
+
+describe("material filters", () => {
+  it("matches keyword across title, body, excerpt, source, tags, and taxonomy names", () => {
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, query: "数字政府" })).toHaveLength(1);
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, query: "流程再造" })).toHaveLength(1);
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, query: "政策材料" })).toHaveLength(1);
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, query: "网格化" })).toHaveLength(1);
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, query: "申发论述" })).toHaveLength(2);
+  });
+
+  it("filters by topic, material type, question type, and tag", () => {
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, topicSlug: "rural-revitalization" })).toHaveLength(1);
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, materialType: "solution" })).toHaveLength(1);
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, questionTypeSlug: "implementation" })).toHaveLength(2);
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, tagName: "共同富裕" })).toHaveLength(1);
+  });
+
+  it("filters favorites and review-enabled materials", () => {
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, favoriteOnly: true })).toHaveLength(1);
+    expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, reviewOnly: true })).toHaveLength(3);
+  });
+
+  it("sorts available tags by Chinese locale", () => {
+    expect(getAvailableTags(materials)).toEqual([
+      "产业振兴",
+      "共同富裕",
+      "基层服务",
+      "流程再造",
+      "网格化",
+      "政务服务",
+    ]);
+  });
+
+  it("detects active filters", () => {
+    expect(hasActiveFilters(DEFAULT_MATERIAL_FILTERS)).toBe(false);
+    expect(hasActiveFilters({ ...DEFAULT_MATERIAL_FILTERS, query: "治理" })).toBe(true);
+    expect(hasActiveFilters({ ...DEFAULT_MATERIAL_FILTERS, favoriteOnly: true })).toBe(true);
+  });
+});

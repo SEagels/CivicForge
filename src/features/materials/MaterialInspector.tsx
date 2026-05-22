@@ -18,6 +18,8 @@ export function MaterialInspector({ material, onChange, onArchive }: MaterialIns
     );
   }
 
+  const wordCount = countText(material.contentMd);
+
   return (
     <aside className="inspector" aria-label="属性面板">
       <div className="pane-header compact">
@@ -29,6 +31,15 @@ export function MaterialInspector({ material, onChange, onArchive }: MaterialIns
           归档
         </button>
       </div>
+
+      <label className="favorite-row">
+        <input
+          type="checkbox"
+          checked={material.favorite}
+          onChange={(event) => onChange({ favorite: event.target.checked })}
+        />
+        <span>收藏这条素材</span>
+      </label>
 
       <label className="field">
         <span>主题</span>
@@ -102,6 +113,25 @@ export function MaterialInspector({ material, onChange, onArchive }: MaterialIns
         <span>加入复习</span>
       </label>
 
+      <div className="stat-grid" aria-label="素材统计">
+        <div>
+          <span>字数</span>
+          <strong>{wordCount}</strong>
+        </div>
+        <div>
+          <span>标签</span>
+          <strong>{material.tagNames.length}</strong>
+        </div>
+        <div>
+          <span>状态</span>
+          <strong>{material.status === "draft" ? "草稿" : "已入库"}</strong>
+        </div>
+        <div>
+          <span>复习</span>
+          <strong>{material.reviewEnabled ? "开启" : "关闭"}</strong>
+        </div>
+      </div>
+
       <div className="inspector-note">
         <span>更新时间</span>
         <strong>{new Date(material.updatedAt).toLocaleString("zh-CN")}</strong>
@@ -112,4 +142,8 @@ export function MaterialInspector({ material, onChange, onArchive }: MaterialIns
 
 function toggleValue(values: readonly string[], value: string): readonly string[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+}
+
+function countText(value: string): number {
+  return value.replace(/\s+/g, "").length;
 }

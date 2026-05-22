@@ -131,8 +131,18 @@ h2 {
   color: #6b4d34;
 }
 
+.link-button {
+  background: transparent;
+  border: 0;
+  color: #7c593a;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0;
+}
+
 .search-box input,
 .field input,
+.filter-grid select,
 .field select,
 .source-editor textarea {
   background: #fbfaf7;
@@ -144,6 +154,7 @@ h2 {
 
 .search-box input:focus,
 .field input:focus,
+.filter-grid select:focus,
 .field select:focus,
 .source-editor textarea:focus,
 .title-input:focus {
@@ -157,11 +168,81 @@ h2 {
   width: 100%;
 }
 
+.filter-panel {
+  border-bottom: 1px solid #d9d0c4;
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding-bottom: 12px;
+}
+
+.filter-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.filter-grid label {
+  display: grid;
+  gap: 5px;
+}
+
+.filter-grid span,
+.result-line span {
+  color: #6b6259;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filter-grid select {
+  height: 34px;
+  padding: 0 7px;
+  width: 100%;
+}
+
+.filter-toggles,
+.result-line {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.filter-toggles {
+  justify-content: flex-start;
+}
+
+.filter-toggles label {
+  align-items: center;
+  color: #3a342e;
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+}
+
 .material-items {
   display: grid;
   gap: 8px;
   margin-top: 12px;
   overflow: auto;
+}
+
+.empty-list {
+  background: #f8f4ee;
+  border: 1px dashed #cbbcab;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 16px 12px;
+}
+
+.empty-list strong {
+  font-size: 14px;
+}
+
+.empty-list span {
+  color: #70685f;
+  font-size: 12px;
 }
 
 .material-card {
@@ -250,7 +331,9 @@ h2 {
 .source-editor span,
 .field span,
 .field-group legend,
+.favorite-row span,
 .switch-row span,
+.stat-grid span,
 .inspector-note span {
   color: #6b6259;
   font-size: 12px;
@@ -275,6 +358,17 @@ h2 {
   display: grid;
   gap: 7px;
   margin-bottom: 14px;
+}
+
+.favorite-row {
+  align-items: center;
+  background: #f8f4ee;
+  border: 1px solid #d8d0c5;
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
 }
 
 .field input,
@@ -323,6 +417,27 @@ h2 {
   font-size: 13px;
 }
 
+.stat-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 16px;
+}
+
+.stat-grid div {
+  background: #f8f4ee;
+  border: 1px solid #d8d0c5;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+}
+
+.stat-grid strong {
+  color: #302c28;
+  font-size: 14px;
+}
+
 .empty-state {
   align-content: center;
   display: grid;
@@ -362,8 +477,12 @@ h2 {
 
   .editor-pane,
   .material-card,
+  .empty-list,
+  .favorite-row,
+  .stat-grid div,
   .markdown-editor [data-milkdown-root],
   .search-box input,
+  .filter-grid select,
   .field input,
   .field select,
   .source-editor textarea {
@@ -378,16 +497,23 @@ h2 {
 
   .material-meta,
   .material-excerpt,
+  .empty-list span,
   .muted,
   .source-editor span,
   .field span,
+  .filter-grid span,
+  .result-line span,
   .field-group legend,
+  .favorite-row span,
   .switch-row span,
+  .stat-grid span,
   .inspector-note span {
     color: #aaa096;
   }
 
   .check-row span,
+  .filter-toggles label,
+  .stat-grid strong,
   .inspector-note strong {
     color: #eee8df;
   }

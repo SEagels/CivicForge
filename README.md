@@ -169,4 +169,11 @@ Completed phase-two slice:
 - Material creation, selection, editing, metadata updates, review toggle, and archive action.
 - Milkdown CommonMark editor integration with a Markdown source fallback.
 
-阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程，后续阶段会接入 SQLite 持久化、FTS5 搜索、复习调度和 Rewrite 工作坊。
+Completed phase-three slice:
+
+- In-memory keyword search across title, body, excerpt, source, tags, and taxonomy names.
+- Topic, material type, question type, tag, favorite-only, and review-enabled filters.
+- Filter result counts, clear-filter action, and empty-state guidance.
+- Inspector statistics for word count, tag count, status, review state, and favorite toggle.
+
+阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程。阶段三已实现内存搜索与筛选；后续阶段会把这些查询能力迁移到 SQLite 持久化和 FTS5 搜索层，并继续实现复习调度和 Rewrite 工作坊。
