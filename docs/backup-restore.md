@@ -1,54 +1,61 @@
 # Backup And Restore / 备份与恢复
 
-CivicForge keeps user data local by default. Backup and restore features are designed around the SQLite database file plus optional structured exports.
+CivicForge is local-first. Backups are designed to keep the user in control of files on their own machine.
 
-CivicForge 默认只在本地保存数据。备份与恢复围绕 SQLite 数据库文件和结构化导出设计。
+CivicForge 是本地优先应用。备份与恢复围绕用户自己的本地文件展开。
 
-## Backup Types / 备份类型
+## Current Implementation / 当前实现
 
-### Full Database Backup / 完整数据库备份
+The Import/Export page supports a portable JSON archive.
 
-Creates a copy of the SQLite database file, intended for reliable restore.
+The archive contains:
 
-生成 SQLite 数据库文件副本，适合完整恢复。
+- Material state
+- Rewrite history
+- App settings
+- Archive version
+- Export timestamp
 
-Recommended file name:
+导入导出页当前支持 JSON 归档备份，内容包括素材状态、Rewrite 历史、应用设置、归档版本号和导出时间。
 
-```text
-civicforge-backup-YYYYMMDD-HHmmss.db
-```
+## File Operations / 文件操作
 
-### JSON Export / JSON 导出
+In Tauri desktop runtime:
 
-Exports materials, topics, tags, question types, review logs, and rewrite logs as structured data.
+- Export uses `@tauri-apps/plugin-dialog` to choose a save path.
+- Export uses `@tauri-apps/plugin-fs` to write the JSON file.
+- Restore uses the Tauri dialog to choose a JSON file.
+- Restore uses the Tauri fs plugin to read the selected file.
 
-导出素材、主题、标签、题型、复习日志和改写日志，适合跨版本迁移。
+In browser preview:
 
-### Markdown Export / Markdown 导出
+- Export falls back to a Blob download.
+- Restore can use the file input or pasted JSON text.
 
-Exports each material as a Markdown file with frontmatter metadata.
-
-将每条素材导出为带 frontmatter 的 Markdown 文件，适合长期归档和外部编辑。
+在 Tauri 桌面运行时，导出和恢复优先使用官方 dialog/fs 插件。浏览器预览中，导出回退为浏览器下载，恢复支持文件输入或粘贴 JSON。
 
 ## Restore Safety / 恢复安全
 
-Before replacing the active database, the app should:
+Restore currently validates:
 
-1. Verify the selected file exists.
-2. Open it as SQLite.
-3. Check that required tables exist.
-4. Check `schema_migrations`.
-5. Create a safety backup of the current database.
-6. Replace the active database.
-7. Ask the user to restart the app.
+- `appName` is `CivicForge`
+- archive version is compatible
+- material state shape is valid
+- rewrite logs shape is valid
+- settings shape is valid
 
-恢复前应用应先校验数据库结构，并为当前数据库生成安全备份。
+If validation fails, the app does not replace current state.
 
-## Retention / 保留策略
+恢复时会校验应用名、归档版本、素材结构、Rewrite 结构和设置结构。校验失败不会覆盖当前数据。
 
-Phase one only documents the policy. Later implementation can support:
+## Future Enhancements / 后续增强
 
-- Manual backup.
+Possible later work:
+
+- Full SQLite database file backup.
 - Daily first-launch backup.
-- Retention count, such as keeping the latest 10 backups.
-- Backup directory selection through the Tauri dialog plugin.
+- Retention policy, such as keeping the latest 10 backups.
+- Restore preview before applying.
+- Export selected materials as Markdown with frontmatter.
+
+后续可以继续增强为完整 SQLite 文件备份、每日首次启动自动备份、备份保留策略、恢复前预览，以及 Markdown 归档导出。

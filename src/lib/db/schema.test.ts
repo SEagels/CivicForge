@@ -23,12 +23,17 @@ describe("SQLite schema", () => {
     expect(INITIAL_SCHEMA_SQL).toContain("idx_material_question_types_question_type");
   });
 
-  it("registers the initial migration with a stable version", () => {
-    expect(DATABASE_MIGRATIONS).toHaveLength(1);
+  it("registers migrations with stable versions", () => {
+    expect(DATABASE_MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2]);
     expect(DATABASE_MIGRATIONS[0]).toMatchObject({
       version: 1,
       name: "initial_schema",
     });
     expect(DATABASE_MIGRATIONS[0].sql).toBe(INITIAL_SCHEMA_SQL);
+    expect(DATABASE_MIGRATIONS[1]).toMatchObject({
+      version: 2,
+      name: "rewrite_log_uuid",
+    });
+    expect(DATABASE_MIGRATIONS[1].sql).toContain("ALTER TABLE rewrite_logs ADD COLUMN uuid");
   });
 });

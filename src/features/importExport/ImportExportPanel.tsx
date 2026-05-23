@@ -2,17 +2,32 @@ import { useState } from "react";
 
 export interface ImportExportPanelProps {
   readonly archiveJson: string;
-  readonly onDownloadArchive: () => void;
+  readonly onDownloadArchive: () => void | Promise<void>;
   readonly onRestoreArchive: (rawArchive: string) => boolean;
+  readonly onRestoreFromFile?: () => Promise<boolean>;
 }
 
-export function ImportExportPanel({ archiveJson, onDownloadArchive, onRestoreArchive }: ImportExportPanelProps) {
+export function ImportExportPanel({
+  archiveJson,
+  onDownloadArchive,
+  onRestoreArchive,
+  onRestoreFromFile,
+}: ImportExportPanelProps) {
   const [rawArchive, setRawArchive] = useState("");
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
 
   const restoreArchive = () => {
     const restored = onRestoreArchive(rawArchive);
     setRestoreMessage(restored ? "恢复成功，素材、Rewrite 历史和设置已更新。" : "恢复失败，请检查 JSON 是否来自 CivicForge。");
+  };
+
+  const restoreFromFile = async () => {
+    if (!onRestoreFromFile) {
+      return;
+    }
+
+    const restored = await onRestoreFromFile();
+    setRestoreMessage(restored ? "恢复成功，已从本地备份文件读取数据。" : "未恢复数据，可能是取消选择或文件格式不正确。");
   };
 
   const importFile = (file: File | undefined) => {
@@ -35,7 +50,7 @@ export function ImportExportPanel({ archiveJson, onDownloadArchive, onRestoreArc
           <p className="eyebrow">Import / Export</p>
           <h1>把本地数据打包成一个可以带走的备份。</h1>
         </div>
-        <button type="button" className="primary-button" onClick={onDownloadArchive}>
+        <button type="button" className="primary-button" onClick={() => void onDownloadArchive()}>
           下载 JSON 备份
         </button>
       </header>
@@ -48,6 +63,13 @@ export function ImportExportPanel({ archiveJson, onDownloadArchive, onRestoreArc
 
         <section className="archive-section">
           <h2>恢复备份</h2>
+          {onRestoreFromFile ? (
+            <div className="settings-actions">
+              <button type="button" className="ghost-button" onClick={() => void restoreFromFile()}>
+                从本地文件选择
+              </button>
+            </div>
+          ) : null}
           <label className="field">
             <span>选择 JSON 文件</span>
             <input type="file" accept="application/json,.json" onChange={(event) => importFile(event.target.files?.[0])} />

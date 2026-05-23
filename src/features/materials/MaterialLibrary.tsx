@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ReviewRating } from "../../domain/enums";
-import { loadCivicForgeDatabase } from "../../lib/db/databaseClient";
-import { initializeCivicForgeDatabase } from "../../lib/db/databaseInitializer";
+import { createAppDataService, type AppDataService, type StorageMode } from "../appData/appDataService";
 import { DashboardPanel } from "../dashboard/DashboardPanel";
 import { MarkdownEditor } from "../editor/MarkdownEditor";
+import { readArchiveFile, saveArchiveFile } from "../importExport/archiveFileAdapter";
 import {
   createAppArchive,
   createArchiveFilename,
@@ -13,16 +13,8 @@ import {
 import { ImportExportPanel } from "../importExport/ImportExportPanel";
 import { ReviewPanel } from "../review/ReviewPanel";
 import { RewritePanel } from "../rewrite/RewritePanel";
-import { getBrowserRewriteStorage, loadRewriteLogs, saveRewriteLogs } from "../rewrite/rewritePersistence";
 import { buildMaterialInputFromRewrite, type RewriteLog } from "../rewrite/rewriteWorkshop";
-import {
-  DEFAULT_APP_SETTINGS,
-  applyThemeMode,
-  getBrowserSettingsStorage,
-  loadAppSettings,
-  saveAppSettings,
-  type AppSettings,
-} from "../settings/appSettings";
+import { DEFAULT_APP_SETTINGS, applyThemeMode, type AppSettings } from "../settings/appSettings";
 import { SettingsPanel } from "../settings/SettingsPanel";
 import { TaxonomyPanel } from "../taxonomy/TaxonomyPanel";
 import { MaterialInspector } from "./MaterialInspector";
@@ -34,8 +26,6 @@ import {
   hasActiveFilters,
   type MaterialFilters,
 } from "./materialFilters";
-import { getBrowserMaterialStorage, loadMaterialState, saveMaterialState } from "./materialPersistence";
-import { createMaterialRepository, type MaterialRepository } from "./materialRepository";
 import {
   archiveSelectedMaterial,
   createInitialMaterialState,
@@ -54,24 +44,15 @@ type AppView = "dashboard" | "library" | "review" | "rewrite" | "taxonomy" | "im
 const STORAGE_MODE_PREVIEW = "Preview localStorage";
 
 export function MaterialLibrary() {
-  const [state, setState] = useState(() => {
-    const storage = getBrowserMaterialStorage();
-    return storage ? loadMaterialState(storage) ?? createInitialMaterialState() : createInitialMaterialState();
-  });
+  const [state, setState] = useState(createInitialMaterialState);
   const [filters, setFilters] = useState<MaterialFilters>(DEFAULT_MATERIAL_FILTERS);
   const [view, setView] = useState<AppView>("dashboard");
   const [reviewFocusId, setReviewFocusId] = useState<string | null>(null);
-  const [storageMode, setStorageMode] = useState(STORAGE_MODE_PREVIEW);
-  const [settings, setSettings] = useState<AppSettings>(() => {
-    const storage = getBrowserSettingsStorage();
-    return storage ? loadAppSettings(storage) : DEFAULT_APP_SETTINGS;
-  });
-  const [rewriteLogs, setRewriteLogs] = useState<readonly RewriteLog[]>(() => {
-    const storage = getBrowserRewriteStorage();
-    return storage ? loadRewriteLogs(storage) : [];
-  });
-  const repositoryRef = useRef<MaterialRepository | null>(null);
-  const initialStateRef = useRef(state);
+  const [storageMode, setStorageMode] = useState<StorageMode>(STORAGE_MODE_PREVIEW);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
+  const [rewriteLogs, setRewriteLogs] = useState<readonly RewriteLog[]>([]);
+  const dataServiceRef = useRef<AppDataService | null>(null);
+  const hydratedRef = useRef(false);
 
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
   const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
@@ -93,48 +74,23 @@ export function MaterialLibrary() {
   useEffect(() => {
     let cancelled = false;
 
-    async function initializeSqliteStorage() {
-      try {
-        const db = await loadCivicForgeDatabase();
+    async function loadAppData() {
+      const service = createAppDataService();
+      dataServiceRef.current = service;
+      const snapshot = await service.load();
 
-        if (!db || cancelled) {
-          return;
-        }
-
-        await initializeCivicForgeDatabase(db);
-        const repository = createMaterialRepository(db);
-        const sqliteMaterials = await repository.listActiveMaterials();
-
-        if (cancelled) {
-          return;
-        }
-
-        repositoryRef.current = repository;
-        setStorageMode("SQLite");
-
-        if (sqliteMaterials.length > 0) {
-          setState((current) => ({
-            materials: sqliteMaterials,
-            selectedId: sqliteMaterials.some((material) => material.id === current.selectedId)
-              ? current.selectedId
-              : sqliteMaterials[0].id,
-          }));
-          return;
-        }
-
-        for (const material of initialStateRef.current.materials) {
-          if (material.status === "active" || material.status === "draft") {
-            await repository.saveMaterial(material);
-          }
-        }
-      } catch (error) {
-        repositoryRef.current = null;
-        setStorageMode(STORAGE_MODE_PREVIEW);
-        console.warn("Unable to initialize CivicForge SQLite storage; falling back to preview persistence.", error);
+      if (cancelled) {
+        return;
       }
+
+      setState(snapshot.materialsState);
+      setRewriteLogs(snapshot.rewriteLogs);
+      setSettings(snapshot.settings);
+      setStorageMode(snapshot.storageMode);
+      hydratedRef.current = true;
     }
 
-    void initializeSqliteStorage();
+    void loadAppData();
 
     return () => {
       cancelled = true;
@@ -142,85 +98,35 @@ export function MaterialLibrary() {
   }, []);
 
   useEffect(() => {
-    const storage = getBrowserMaterialStorage();
-
-    if (!storage) {
+    if (!hydratedRef.current) {
       return;
     }
 
-    try {
-      saveMaterialState(storage, state);
-    } catch (error) {
+    void dataServiceRef.current?.saveMaterials(state).catch((error) => {
       console.warn("Unable to save CivicForge material state.", error);
-    }
+    });
   }, [state]);
 
   useEffect(() => {
-    const repository = repositoryRef.current;
-
-    if (!repository) {
+    if (!hydratedRef.current) {
       return;
     }
 
-    const activeRepository = repository;
-    let cancelled = false;
-
-    async function syncSqliteMaterials() {
-      try {
-        for (const material of state.materials) {
-          if (cancelled) {
-            return;
-          }
-
-          if (material.status === "archived") {
-            await activeRepository.archiveMaterial(material.id);
-            continue;
-          }
-
-          if (material.status === "active" || material.status === "draft") {
-            await activeRepository.saveMaterial(material);
-          }
-        }
-      } catch (error) {
-        console.warn("Unable to sync CivicForge materials to SQLite.", error);
-      }
-    }
-
-    void syncSqliteMaterials();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [state]);
-
-  useEffect(() => {
-    const storage = getBrowserRewriteStorage();
-
-    if (!storage) {
-      return;
-    }
-
-    try {
-      saveRewriteLogs(storage, rewriteLogs);
-    } catch (error) {
+    void dataServiceRef.current?.saveRewriteLogs(rewriteLogs).catch((error) => {
       console.warn("Unable to save CivicForge rewrite logs.", error);
-    }
+    });
   }, [rewriteLogs]);
 
   useEffect(() => {
-    const storage = getBrowserSettingsStorage();
-
     applyThemeMode(settings);
 
-    if (!storage) {
+    if (!hydratedRef.current) {
       return;
     }
 
-    try {
-      saveAppSettings(storage, settings);
-    } catch (error) {
+    void dataServiceRef.current?.saveSettings(settings).catch((error) => {
       console.warn("Unable to save CivicForge settings.", error);
-    }
+    });
   }, [settings]);
 
   const updateSelected = useCallback((patch: MaterialPatch) => {
@@ -283,17 +189,9 @@ export function MaterialLibrary() {
   }, []);
 
   const downloadArchive = useCallback(() => {
-    if (typeof document === "undefined" || typeof URL === "undefined" || typeof Blob === "undefined") {
-      return;
-    }
-
-    const blob = new Blob([archiveJson], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = createArchiveFilename();
-    anchor.click();
-    URL.revokeObjectURL(url);
+    void saveArchiveFile(archiveJson, createArchiveFilename()).catch((error) => {
+      console.warn("Unable to export CivicForge archive.", error);
+    });
   }, [archiveJson]);
 
   const restoreArchive = useCallback((rawArchive: string): boolean => {
@@ -311,6 +209,16 @@ export function MaterialLibrary() {
     setView("dashboard");
     return true;
   }, []);
+
+  const restoreArchiveFromFile = useCallback(async (): Promise<boolean> => {
+    const result = await readArchiveFile();
+
+    if (!result.ok) {
+      return false;
+    }
+
+    return restoreArchive(result.content);
+  }, [restoreArchive]);
 
   return (
     <main className="desktop-shell">
@@ -420,6 +328,7 @@ export function MaterialLibrary() {
           archiveJson={archiveJson}
           onDownloadArchive={downloadArchive}
           onRestoreArchive={restoreArchive}
+          onRestoreFromFile={restoreArchiveFromFile}
         />
       ) : (
         <SettingsPanel

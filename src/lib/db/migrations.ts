@@ -12,4 +12,13 @@ export const DATABASE_MIGRATIONS = [
     name: "initial_schema",
     sql: INITIAL_SCHEMA_SQL,
   },
+  {
+    version: 2,
+    name: "rewrite_log_uuid",
+    sql: `
+ALTER TABLE rewrite_logs ADD COLUMN uuid TEXT NOT NULL DEFAULT '';
+UPDATE rewrite_logs SET uuid = 'rewrite-db-' || id WHERE uuid = '';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rewrite_logs_uuid ON rewrite_logs(uuid);
+`.trim(),
+  },
 ] as const satisfies readonly DatabaseMigration[];

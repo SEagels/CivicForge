@@ -74,6 +74,8 @@ npm run tauri build
 
 Native Tauri build requires Rust/Cargo.
 
+Current machine note: `rustc -V` and `cargo -V` are not available in `PATH`, so `npx tauri build` currently stops at `cargo metadata`. Install Rust from [rustup.rs](https://rustup.rs/) or your preferred Windows toolchain setup before native packaging.
+
 ## Test / 测试
 
 ```powershell
@@ -112,10 +114,11 @@ The local SQLite database is configured as `sqlite:civicforge.db` through the Ta
 1. Load the SQLite database.
 2. Run schema migrations.
 3. Seed built-in topics and question types.
-4. Read active/draft materials through the repository layer.
-5. Fall back to browser `localStorage` when Tauri runtime is unavailable.
+4. Read active/draft materials, Rewrite history, and app settings through repository layers.
+5. Save future materials, Rewrite history, and settings back to SQLite.
+6. Fall back to browser `localStorage` when Tauri runtime is unavailable.
 
-本地 SQLite 数据库通过 Tauri SQL 插件配置为 `sqlite:civicforge.db`。在 Tauri runtime 中启动时，应用会尝试加载数据库、执行迁移、写入内置主题与题型，并通过 repository 读取素材。普通 `npm run dev` 浏览器预览没有 Tauri runtime，因此会回退到 localStorage。
+本地 SQLite 数据库通过 Tauri SQL 插件配置为 `sqlite:civicforge.db`。在 Tauri runtime 中启动时，应用会尝试加载数据库、执行迁移、写入内置主题与题型，并通过 repository 读写素材、Rewrite 历史和应用设置。普通 `npm run dev` 浏览器预览没有 Tauri runtime，因此会回退到 localStorage。
 
 Core tables:
 
@@ -135,14 +138,14 @@ See [docs/database.md](docs/database.md) for details.
 
 ## Backup And Restore / 备份与恢复
 
-The current app supports portable JSON archive export and restore from the Import/Export page. The archive contains:
+The current app supports portable JSON archive export and restore from the Import/Export page. In Tauri runtime, export/restore uses official dialog and filesystem plugins; browser preview keeps Blob download, file input, and paste fallback. The archive contains:
 
 - Material state
 - Rewrite history
 - App settings
 - Archive version and export timestamp
 
-当前应用已支持在导入导出页生成和恢复 JSON 备份。备份内容包含素材状态、Rewrite 历史、应用设置、归档版本号和导出时间。SQLite 文件级备份仍保留为后续增强项。
+当前应用已支持在导入导出页生成和恢复 JSON 备份。Tauri runtime 中优先使用官方 dialog/fs 插件；浏览器预览保留下载、文件输入和粘贴回退。备份内容包含素材状态、Rewrite 历史、应用设置、归档版本号和导出时间。SQLite 文件级备份仍保留为后续增强项。
 
 See [docs/backup-restore.md](docs/backup-restore.md) for the longer backup strategy.
 
@@ -159,6 +162,7 @@ Completed:
 - Import/Export: JSON archive preview, download, paste/file restore.
 - Settings/Backup: theme mode, backup preference, storage status, sample reset.
 - SQLite layer: migrations, seed data, repository mapping, startup wiring with fallback.
+- Desktop data closure: SQLite persistence for materials, Rewrite logs, and settings; Tauri-native archive save/open.
 
 已完成：
 
@@ -171,3 +175,4 @@ Completed:
 - 导入导出：JSON 备份预览、下载、粘贴/文件恢复。
 - 设置备份：主题模式、备份偏好、存储状态、示例数据重置。
 - SQLite 层：迁移、内置数据 seed、仓储映射、启动接入和预览回退。
+- 桌面数据闭环：素材、Rewrite 历史和设置落到 SQLite，导入导出优先走 Tauri 本地文件能力。
