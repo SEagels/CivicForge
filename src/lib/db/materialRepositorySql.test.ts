@@ -8,6 +8,7 @@ describe("material repository SQL assets", () => {
       "searchMaterials",
       "upsertMaterial",
       "archiveMaterial",
+      "upsertTagByName",
       "deleteMaterialTags",
       "insertMaterialTagBySlug",
       "deleteMaterialQuestionTypes",
@@ -32,8 +33,8 @@ describe("material repository SQL assets", () => {
     const sql = MATERIAL_REPOSITORY_SQL.searchMaterials;
 
     expect(sql).toContain("materials_fts");
-    expect(sql).toContain("MATCH :query");
-    expect(sql).toContain("LIKE :like_query");
+    expect(sql).toContain("MATCH $1");
+    expect(sql).toContain("LIKE $2");
     expect(sql).toContain("UNION");
     expect(sql).toContain("m.status IN ('active', 'draft')");
   });
@@ -46,6 +47,8 @@ describe("material repository SQL assets", () => {
     expect(sql).toContain("ON CONFLICT(uuid) DO UPDATE SET");
     expect(sql).toContain("review_enabled = excluded.review_enabled");
     expect(sql).toContain("updated_at = excluded.updated_at");
+    expect(sql).toContain("$1");
+    expect(sql).toContain("$20");
   });
 
   it("archives materials without deleting their review or rewrite history", () => {
@@ -53,26 +56,34 @@ describe("material repository SQL assets", () => {
 
     expect(sql).toContain("UPDATE materials");
     expect(sql).toContain("status = 'archived'");
-    expect(sql).toContain("deleted_at = :deleted_at");
-    expect(sql).toContain("WHERE uuid = :uuid");
+    expect(sql).toContain("deleted_at = $1");
+    expect(sql).toContain("WHERE uuid = $3");
+  });
+
+  it("upserts free-form tags before replacing tag links", () => {
+    const sql = MATERIAL_REPOSITORY_SQL.upsertTagByName;
+
+    expect(sql).toContain("INSERT INTO tags");
+    expect(sql).toContain("ON CONFLICT(slug) DO UPDATE SET");
+    expect(sql).toContain("name = excluded.name");
   });
 
   it("replaces many-to-many tag and question type links by material uuid", () => {
     expect(MATERIAL_REPOSITORY_SQL.deleteMaterialTags).toContain("DELETE FROM material_tags");
-    expect(MATERIAL_REPOSITORY_SQL.deleteMaterialTags).toContain("SELECT id FROM materials WHERE uuid = :material_uuid");
+    expect(MATERIAL_REPOSITORY_SQL.deleteMaterialTags).toContain("SELECT id FROM materials WHERE uuid = $1");
     expect(MATERIAL_REPOSITORY_SQL.insertMaterialTagBySlug).toContain("INSERT OR IGNORE INTO material_tags");
     expect(MATERIAL_REPOSITORY_SQL.insertMaterialTagBySlug).toContain("SELECT material.id, tag.id");
-    expect(MATERIAL_REPOSITORY_SQL.insertMaterialTagBySlug).toContain("tag.slug = :tag_slug");
+    expect(MATERIAL_REPOSITORY_SQL.insertMaterialTagBySlug).toContain("tag.slug = $2");
 
     expect(MATERIAL_REPOSITORY_SQL.deleteMaterialQuestionTypes).toContain("DELETE FROM material_question_types");
     expect(MATERIAL_REPOSITORY_SQL.deleteMaterialQuestionTypes).toContain(
-      "SELECT id FROM materials WHERE uuid = :material_uuid",
+      "SELECT id FROM materials WHERE uuid = $1",
     );
     expect(MATERIAL_REPOSITORY_SQL.insertMaterialQuestionTypeBySlug).toContain(
       "INSERT OR IGNORE INTO material_question_types",
     );
     expect(MATERIAL_REPOSITORY_SQL.insertMaterialQuestionTypeBySlug).toContain(
-      "question_type.slug = :question_type_slug",
+      "question_type.slug = $2",
     );
   });
 });

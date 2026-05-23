@@ -99,7 +99,7 @@ CivicForge/
       materials/         Material library, filters, persistence helpers
       review/            Lightweight Anki-style review scheduler and UI
       rewrite/           Template-based rewrite workshop and history helpers
-    lib/db/              SQLite schema and migration assets
+    lib/db/              SQLite schema, migration, and Tauri SQL client assets
     styles/              Global styles
   src-tauri/             Tauri native shell and permissions
   docs/                  Database, backup, and implementation notes
@@ -110,9 +110,9 @@ CivicForge/
 
 ## Database / 数据库说明
 
-The local SQLite database will be created in the app data directory during the runtime integration phase. Phase one defines the initial schema and migrations, and phase four adds tested material repository SQL assets.
+The local SQLite database is configured as `sqlite:civicforge.db` through the Tauri SQL plugin. Phase seven adds the database client, migration initializer, taxonomy seeding, and a tested material repository layer.
 
-一期已经定义 SQLite 初始 schema 与迁移资产，第四阶段补充了素材仓储 SQL 资产。运行期接入后，数据库会放在应用数据目录中。
+本地 SQLite 数据库通过 Tauri SQL 插件配置为 `sqlite:civicforge.db`。阶段七已经补充数据库连接、迁移初始化、内置分类 seed，以及带测试的素材仓储层。
 
 During the current frontend preview, material edits are persisted in browser `localStorage` so refresh testing is safe before the native SQLite runtime is wired.
 
@@ -199,4 +199,11 @@ Completed phase-six slice:
 - Prompt template generation for external model use or manual editing.
 - Rewrite history persistence and saving results as new materials.
 
-阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程。阶段三已实现内存搜索与筛选。阶段四让前端预览具备刷新后恢复能力，并准备好后续接入 Tauri SQLite 的素材仓储 SQL。阶段五已完成轻量 Anki 式复习一期。阶段六已完成模板化 Rewrite 工坊一期，包括导入原文、生成提示模板、保存历史和保存为新素材。
+Completed phase-seven slice:
+
+- Tauri SQL database client for `sqlite:civicforge.db`.
+- Runtime migration initializer and built-in topic/question-type seeding.
+- Material repository mapping between SQLite rows and `MaterialDraft`.
+- Positional SQL parameters compatible with the Tauri SQL plugin.
+
+阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程。阶段三已实现内存搜索与筛选。阶段四让前端预览具备刷新后恢复能力。阶段五已完成轻量 Anki 式复习一期。阶段六已完成模板化 Rewrite 工坊一期。阶段七已补齐 Tauri SQLite 数据层底座，下一步可以把 UI 读写切换到真正的 repository。
