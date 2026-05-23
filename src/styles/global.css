@@ -767,6 +767,302 @@ button:disabled {
   -webkit-line-clamp: 3;
 }
 
+.dashboard-workspace,
+.taxonomy-workspace,
+.import-export-workspace,
+.settings-workspace {
+  align-content: start;
+  background: #fbfaf7;
+  display: grid;
+  gap: 22px;
+  grid-column: 2 / -1;
+  min-width: 0;
+  overflow: auto;
+  padding: 34px 44px;
+}
+
+.workspace-header {
+  align-items: start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.workspace-header h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  max-width: 760px;
+}
+
+.storage-chip {
+  background: #f0e9df;
+  border: 1px solid #d9d0c4;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-width: 150px;
+  padding: 10px 12px;
+}
+
+.storage-chip span,
+.stat-card span,
+.stat-card small,
+.panel-title-row span,
+.taxonomy-item span,
+.taxonomy-item p,
+.settings-metrics span,
+.restore-message {
+  color: #6b6259;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.storage-chip strong {
+  color: #2b2824;
+  font-size: 14px;
+}
+
+.dashboard-stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+}
+
+.stat-card {
+  background: #fffdf9;
+  border: 1px solid #e3ddd4;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.stat-card strong {
+  color: #2b2824;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.dashboard-grid,
+.import-export-grid,
+.settings-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(360px, 1.18fr);
+}
+
+.dashboard-panel,
+.taxonomy-section,
+.archive-section,
+.settings-section {
+  background: #fffdf9;
+  border: 1px solid #e3ddd4;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+}
+
+.panel-title-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.quick-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.recent-list,
+.taxonomy-list {
+  display: grid;
+  gap: 10px;
+}
+
+.recent-item,
+.taxonomy-item {
+  background: #fbfaf7;
+  border: 1px solid #e4dcd1;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.recent-item strong,
+.taxonomy-item strong,
+.settings-metrics strong {
+  color: #2d2925;
+  font-size: 14px;
+}
+
+.recent-item span {
+  color: #806143;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recent-item p,
+.taxonomy-item p {
+  margin: 0;
+}
+
+.taxonomy-layout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+}
+
+.taxonomy-item {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.taxonomy-item.active {
+  border-color: #c7b49f;
+}
+
+.taxonomy-item > span {
+  background: #f0e9df;
+  border-radius: 999px;
+  min-width: 32px;
+  padding: 5px 9px;
+  text-align: center;
+}
+
+.settings-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+}
+
+.settings-metrics div {
+  background: #fbfaf7;
+  border: 1px solid #e4dcd1;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.inline-switch {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.danger-section {
+  border-color: #d8c3b8;
+}
+
+.archive-preview {
+  background: #fbfaf7;
+  border: 1px solid #d8d0c5;
+  border-radius: 8px;
+  color: #302c28;
+  font-size: 12px;
+  line-height: 1.55;
+  max-height: 520px;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
+.field textarea,
+.field input[type="file"] {
+  background: #fbfaf7;
+  border: 1px solid #d8d0c5;
+  border-radius: 6px;
+  color: #24211e;
+  outline: none;
+  padding: 10px;
+  width: 100%;
+}
+
+.field textarea {
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.restore-message {
+  margin: 0;
+}
+
+:root[data-theme="dark"] {
+  color: #eee8df;
+  background: #181614;
+}
+
+:root[data-theme="dark"] .desktop-shell {
+  background: #181614;
+}
+
+:root[data-theme="dark"] .sidebar,
+:root[data-theme="dark"] .material-list,
+:root[data-theme="dark"] .inspector {
+  background: #211f1c;
+  border-color: #39332e;
+}
+
+:root[data-theme="dark"] .editor-pane,
+:root[data-theme="dark"] .review-workspace,
+:root[data-theme="dark"] .rewrite-workspace,
+:root[data-theme="dark"] .dashboard-workspace,
+:root[data-theme="dark"] .taxonomy-workspace,
+:root[data-theme="dark"] .import-export-workspace,
+:root[data-theme="dark"] .settings-workspace,
+:root[data-theme="dark"] .material-card,
+:root[data-theme="dark"] .empty-list,
+:root[data-theme="dark"] .favorite-row,
+:root[data-theme="dark"] .stat-grid div,
+:root[data-theme="dark"] .review-card,
+:root[data-theme="dark"] .rating-button,
+:root[data-theme="dark"] .rewrite-panel,
+:root[data-theme="dark"] .rewrite-status,
+:root[data-theme="dark"] .rewrite-history-item,
+:root[data-theme="dark"] .dashboard-panel,
+:root[data-theme="dark"] .taxonomy-section,
+:root[data-theme="dark"] .archive-section,
+:root[data-theme="dark"] .settings-section,
+:root[data-theme="dark"] .stat-card,
+:root[data-theme="dark"] .recent-item,
+:root[data-theme="dark"] .taxonomy-item,
+:root[data-theme="dark"] .settings-metrics div,
+:root[data-theme="dark"] .storage-chip,
+:root[data-theme="dark"] .archive-preview,
+:root[data-theme="dark"] .markdown-editor [data-milkdown-root],
+:root[data-theme="dark"] .search-box input,
+:root[data-theme="dark"] .filter-grid select,
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .field textarea,
+:root[data-theme="dark"] .field input[type="file"],
+:root[data-theme="dark"] .rewrite-textarea textarea,
+:root[data-theme="dark"] .prompt-preview,
+:root[data-theme="dark"] .source-editor textarea {
+  background: #191715;
+  border-color: #39332e;
+  color: #f1eadf;
+}
+
+:root[data-theme="dark"] .title-input,
+:root[data-theme="dark"] .storage-chip strong,
+:root[data-theme="dark"] .stat-card strong,
+:root[data-theme="dark"] .recent-item strong,
+:root[data-theme="dark"] .taxonomy-item strong,
+:root[data-theme="dark"] .settings-metrics strong {
+  color: #f1eadf;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #eee8df;

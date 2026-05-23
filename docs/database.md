@@ -101,3 +101,15 @@ The runtime migrator will:
 3. Apply pending migrations in ascending order.
 4. Insert a migration record after each successful migration.
 5. Roll back the current transaction on failure.
+
+## Runtime UI Wiring / 运行时接入
+
+The React app now attempts SQLite startup from `MaterialLibrary`:
+
+1. `loadCivicForgeDatabase()` returns `null` in browser preview and loads `sqlite:civicforge.db` in Tauri.
+2. `initializeCivicForgeDatabase()` creates migration metadata, applies pending schema SQL, and seeds built-in topics/question types.
+3. `createMaterialRepository()` reads active/draft materials into the UI.
+4. If SQLite has no material rows yet, the current local sample/localStorage state is inserted as the initial library.
+5. Later material edits are written back through `saveMaterial()`; archived items call `archiveMaterial()`.
+
+普通 `npm run dev` 预览环境没有 Tauri runtime，因此会继续显示 `Preview localStorage`。在 Tauri runtime 中初始化成功后，Dashboard 与 Settings 会显示 `SQLite`。

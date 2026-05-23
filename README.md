@@ -1,20 +1,20 @@
 # CivicForge / 公考申论素材锻造台
 
-CivicForge is a local-first desktop app for civil service essay preparation. It focuses on collecting essay materials, refining standard expressions, reviewing them with a lightweight Anki-style schedule, and writing in a Typora-like Markdown editor.
+CivicForge is a local-first desktop app for civil-service essay preparation. It helps you collect essay materials, refine standard expressions, review them with a lightweight Anki-style schedule, and write in a Typora-like Markdown editor.
 
-CivicForge 是一个本地优先的公务员申论备考桌面应用，专注于素材沉淀、规范表达整理、轻量 Anki 式复习，以及接近 Typora 的 Markdown 写作体验。
+CivicForge 是一个本地优先的公务员申论备考桌面应用，专注于整理申论素材、沉淀规范表达、进行轻量 Anki 式复习，并提供接近 Typora 的 Markdown 写作体验。
 
 ## Positioning / 产品定位
 
-- Local-first and single-user by default.
-- Built for civil service essay preparation, not question practice.
-- Data is stored locally in SQLite.
+- Local-first, single-user, desktop-oriented.
+- Built for essay material management, not question practice.
+- Data is local by default: SQLite in Tauri, localStorage in browser preview.
 - No account system, cloud sync, collaboration, question bank, wrong-answer system, graph view, or plugin marketplace.
 
-- 默认本地优先、单人使用。
-- 专门服务申论备考，不做刷题系统。
-- 数据默认保存在本地 SQLite 数据库。
-- 不做账号、云同步、多人协作、题库、错题、图谱视图、插件市场。
+- 本地优先、单人使用、桌面端体验优先。
+- 专门服务申论素材沉淀，不做刷题、错题或题库。
+- 数据默认保存在本地：Tauri 中使用 SQLite，浏览器预览中使用 localStorage。
+- 不做账号、云同步、多人协作、题库、错题系统、图谱视图和插件市场。
 
 ## Tech Stack / 技术栈
 
@@ -23,35 +23,30 @@ CivicForge 是一个本地优先的公务员申论备考桌面应用，专注于
 - TypeScript
 - Vite
 - SQLite with FTS5
-- Milkdown for the Markdown editor
+- Milkdown Markdown editor
+- Vitest
 
 ## Prerequisites / 环境要求
 
 - Node.js 22+ or 24+
 - npm 11+
-- Rust and Cargo for native Tauri build
+- Rust and Cargo for native Tauri development/build
 - Microsoft Edge WebView2 Runtime on Windows
 
-当前机器已能运行 Node/npm 层验证；如果要执行 `npm run tauri build`，还需要先安装 Rust/Cargo 并确保它们在 `PATH` 中。
+当前机器可以运行 Node/npm 层面的测试和构建。若要执行 `npm run tauri dev` 或 `npm run tauri build`，请先安装 Rust/Cargo，并确认 `rustc -V` 与 `cargo -V` 可以正常输出版本。
 
-## Install / 安装依赖
+## Install / 安装
 
 ```powershell
 cd D:\Projects\CivicForge
-& 'D:\软件\nodejs\npm.cmd' install
-```
-
-If your Node/npm is already in `PATH`, this also works:
-
-```powershell
 npm install
 ```
 
-建议把项目放在全英文路径下，例如 `D:\Projects\CivicForge`。中文路径可能导致 npm 或 Rust 工具链在 Windows 上出现解包或构建问题。
+建议把项目放在全英文路径下，例如 `D:\Projects\CivicForge`，可以减少 Windows 上 Node/Rust 工具链遇到中文路径时的编码或构建问题。
 
 ## Development / 开发启动
 
-Frontend only:
+Frontend preview:
 
 ```powershell
 npm run dev
@@ -77,7 +72,7 @@ Windows desktop package:
 npm run tauri build
 ```
 
-Native Tauri build requires Rust/Cargo. If `rustc -V` or `cargo -V` fails, install Rust first.
+Native Tauri build requires Rust/Cargo.
 
 ## Test / 测试
 
@@ -93,30 +88,34 @@ npm run build
 CivicForge/
   src/
     app/                 React app shell
-    domain/              Essay taxonomy, review enums, shared domain types
+    domain/              Built-in essay taxonomy and shared domain types
     features/
+      dashboard/         Study dashboard and quick actions
       editor/            Milkdown Markdown editing surface
-      materials/         Material library, filters, persistence helpers
-      review/            Lightweight Anki-style review scheduler and UI
-      rewrite/           Template-based rewrite workshop and history helpers
-    lib/db/              SQLite schema, migration, and Tauri SQL client assets
-    styles/              Global styles
-  src-tauri/             Tauri native shell and permissions
-  docs/                  Database, backup, and implementation notes
+      importExport/      JSON archive export and restore helpers/UI
+      materials/         Material library, filters, repository, persistence
+      review/            Lightweight Anki-style scheduler and UI
+      rewrite/           Template-based rewrite workshop and history
+      settings/          Local settings, theme mode, backup preferences
+      taxonomy/          Topic/type/question/tag statistics and UI
+    lib/db/              SQLite schema, migrations, Tauri SQL client
+    styles/              Global desktop styles
+  src-tauri/             Tauri native shell, permissions, plugin config
+  docs/                  Database, backup, and Superpowers plans
   README.md              Bilingual project guide
 ```
 
-后续阶段会继续扩展 `import-export`、`settings` 等功能目录。
-
 ## Database / 数据库说明
 
-The local SQLite database is configured as `sqlite:civicforge.db` through the Tauri SQL plugin. Phase seven adds the database client, migration initializer, taxonomy seeding, and a tested material repository layer.
+The local SQLite database is configured as `sqlite:civicforge.db` through the Tauri SQL plugin. On Tauri startup, the app attempts to:
 
-本地 SQLite 数据库通过 Tauri SQL 插件配置为 `sqlite:civicforge.db`。阶段七已经补充数据库连接、迁移初始化、内置分类 seed，以及带测试的素材仓储层。
+1. Load the SQLite database.
+2. Run schema migrations.
+3. Seed built-in topics and question types.
+4. Read active/draft materials through the repository layer.
+5. Fall back to browser `localStorage` when Tauri runtime is unavailable.
 
-During the current frontend preview, material edits are persisted in browser `localStorage` so refresh testing is safe before the native SQLite runtime is wired.
-
-当前前端预览阶段会把素材编辑结果暂存在浏览器 `localStorage`，这样在接入原生 SQLite 运行期之前，也可以安全验证刷新后恢复。
+本地 SQLite 数据库通过 Tauri SQL 插件配置为 `sqlite:civicforge.db`。在 Tauri runtime 中启动时，应用会尝试加载数据库、执行迁移、写入内置主题与题型，并通过 repository 读取素材。普通 `npm run dev` 浏览器预览没有 Tauri runtime，因此会回退到 localStorage。
 
 Core tables:
 
@@ -136,74 +135,39 @@ See [docs/database.md](docs/database.md) for details.
 
 ## Backup And Restore / 备份与恢复
 
-Planned backup strategy:
+The current app supports portable JSON archive export and restore from the Import/Export page. The archive contains:
 
-- Manual backup creates a full SQLite database copy.
-- Automatic backup can run once per day on first launch.
-- Restore validates the database before replacing the active file.
-- JSON export is used for portable data migration.
-- Markdown export is used for writing-friendly archives.
+- Material state
+- Rewrite history
+- App settings
+- Archive version and export timestamp
 
-计划中的备份策略：
+当前应用已支持在导入导出页生成和恢复 JSON 备份。备份内容包含素材状态、Rewrite 历史、应用设置、归档版本号和导出时间。SQLite 文件级备份仍保留为后续增强项。
 
-- 手动备份生成完整 SQLite 数据库副本。
-- 自动备份可在每日首次启动时执行。
-- 恢复前先校验数据库结构，再替换当前数据库。
-- JSON 导出用于完整迁移。
-- Markdown 导出用于写作友好的长期归档。
+See [docs/backup-restore.md](docs/backup-restore.md) for the longer backup strategy.
 
-See [docs/backup-restore.md](docs/backup-restore.md) for details.
+## Current Modules / 当前模块
 
-## Current Phase / 当前阶段
+Completed:
 
-Completed phase-one foundation:
+- Dashboard: local study summary, review count, quick entry points.
+- Library: material list, filters, metadata inspector, Markdown editor.
+- Editor: Milkdown CommonMark editor with Markdown source fallback.
+- Review: Again / Hard / Good / Easy scheduler, due queue, today count.
+- Rewrite: template-based rewrite workshop, prompt generation, history, save as material.
+- Tags/Themes: built-in topic, material type, question type, and tag statistics.
+- Import/Export: JSON archive preview, download, paste/file restore.
+- Settings/Backup: theme mode, backup preference, storage status, sample reset.
+- SQLite layer: migrations, seed data, repository mapping, startup wiring with fallback.
 
-- Git repository initialized.
-- Tauri + React + TypeScript + Vite scaffold added.
-- Built-in essay taxonomy added.
-- SQLite schema and migration assets added.
-- Vitest coverage added for taxonomy and schema.
-- Bilingual documentation added.
+已完成：
 
-Completed phase-two slice:
-
-- In-memory material library shell.
-- Three-column desktop study layout.
-- Material creation, selection, editing, metadata updates, review toggle, and archive action.
-- Milkdown CommonMark editor integration with a Markdown source fallback.
-
-Completed phase-three slice:
-
-- In-memory keyword search across title, body, excerpt, source, tags, and taxonomy names.
-- Topic, material type, question type, tag, favorite-only, and review-enabled filters.
-- Filter result counts, clear-filter action, and empty-state guidance.
-- Inspector statistics for word count, tag count, status, review state, and favorite toggle.
-
-Completed phase-four slice:
-
-- Refresh-safe browser preview persistence for material state.
-- Reset action for restoring the built-in sample materials.
-- Tested SQLite material repository SQL assets for list, search, upsert, archive, tags, and question types.
-
-Completed phase-five slice:
-
-- Lightweight review scheduler with Again / Hard / Good / Easy ratings.
-- Due queue and today review count.
-- Review state stored on material drafts with compatibility for older preview data.
-- Focused review page and selected-material jump from the inspector.
-
-Completed phase-six slice:
-
-- Template-based Rewrite workshop with pasted or imported source text.
-- Built-in rewrite targets for compressed expressions, argument paragraphs, openings, endings, transitions, title sentences, and free rewriting.
-- Prompt template generation for external model use or manual editing.
-- Rewrite history persistence and saving results as new materials.
-
-Completed phase-seven slice:
-
-- Tauri SQL database client for `sqlite:civicforge.db`.
-- Runtime migration initializer and built-in topic/question-type seeding.
-- Material repository mapping between SQLite rows and `MaterialDraft`.
-- Positional SQL parameters compatible with the Tauri SQL plugin.
-
-阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程。阶段三已实现内存搜索与筛选。阶段四让前端预览具备刷新后恢复能力。阶段五已完成轻量 Anki 式复习一期。阶段六已完成模板化 Rewrite 工坊一期。阶段七已补齐 Tauri SQLite 数据层底座，下一步可以把 UI 读写切换到真正的 repository。
+- Dashboard：学习概览、复习数量、快速入口。
+- 素材库：素材列表、搜索筛选、属性面板、Markdown 编辑。
+- 编辑器：Milkdown CommonMark 编辑器和 Markdown 源码兜底。
+- 复习：Again / Hard / Good / Easy、到期队列、今日待复习数量。
+- Rewrite：模板化改写工坊、提示词生成、历史保存、结果保存为素材。
+- 主题标签：内置主题、素材类型、适用题型和标签统计。
+- 导入导出：JSON 备份预览、下载、粘贴/文件恢复。
+- 设置备份：主题模式、备份偏好、存储状态、示例数据重置。
+- SQLite 层：迁移、内置数据 seed、仓储映射、启动接入和预览回退。
