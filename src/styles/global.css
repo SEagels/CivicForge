@@ -131,6 +131,16 @@ h2 {
   color: #6b4d34;
 }
 
+.reset-button {
+  background: transparent;
+  border: 1px solid #c8b8a5;
+  border-radius: 6px;
+  color: #6b4d34;
+  margin-top: 18px;
+  min-height: 34px;
+  width: 100%;
+}
+
 .link-button {
   background: transparent;
   border: 0;
@@ -516,5 +526,10 @@ h2 {
   .stat-grid strong,
   .inspector-note strong {
     color: #eee8df;
+  }
+
+  .reset-button {
+    border-color: #4b423a;
+    color: #d6c5b2;
   }
 }

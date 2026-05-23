@@ -23,7 +23,7 @@ CivicForge 是一个本地优先的公务员申论备考桌面应用，专注于
 - TypeScript
 - Vite
 - SQLite with FTS5
-- Milkdown planned for the Markdown editor in phase two
+- Milkdown for the Markdown editor
 
 ## Prerequisites / 环境要求
 
@@ -84,6 +84,7 @@ Native Tauri build requires Rust/Cargo. If `rustc -V` or `cargo -V` fails, insta
 ```powershell
 npm test -- --run
 npm run typecheck
+npm run build
 ```
 
 ## Directory Structure / 目录结构
@@ -93,6 +94,9 @@ CivicForge/
   src/
     app/                 React app shell
     domain/              Essay taxonomy, review enums, shared domain types
+    features/
+      editor/            Milkdown Markdown editing surface
+      materials/         Material library, filters, persistence helpers
     lib/db/              SQLite schema and migration assets
     styles/              Global styles
   src-tauri/             Tauri native shell and permissions
@@ -100,20 +104,17 @@ CivicForge/
   README.md              Bilingual project guide
 ```
 
-后续阶段会继续扩展：
-
-- `src/features/materials`
-- `src/features/editor`
-- `src/features/review`
-- `src/features/rewrite`
-- `src/features/import-export`
-- `src/features/settings`
+后续阶段会继续扩展 `review`、`rewrite`、`import-export`、`settings` 等功能目录。
 
 ## Database / 数据库说明
 
-The local SQLite database will be created in the app data directory during the runtime integration phase. Phase one already defines the initial schema and migration assets.
+The local SQLite database will be created in the app data directory during the runtime integration phase. Phase one defines the initial schema and migrations, and phase four adds tested material repository SQL assets.
 
-一期已经定义 SQLite 初始 schema 与迁移资产。运行期接入后，数据库会放在应用数据目录中。
+一期已经定义 SQLite 初始 schema 与迁移资产，第四阶段补充了素材仓储 SQL 资产。运行期接入后，数据库会放在应用数据目录中。
+
+During the current frontend preview, material edits are persisted in browser `localStorage` so refresh testing is safe before the native SQLite runtime is wired.
+
+当前前端预览阶段会把素材编辑结果暂存在浏览器 `localStorage`，这样在接入原生 SQLite 运行期之前，也可以安全验证刷新后恢复。
 
 Core tables:
 
@@ -176,4 +177,10 @@ Completed phase-three slice:
 - Filter result counts, clear-filter action, and empty-state guidance.
 - Inspector statistics for word count, tag count, status, review state, and favorite toggle.
 
-阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程。阶段三已实现内存搜索与筛选；后续阶段会把这些查询能力迁移到 SQLite 持久化和 FTS5 搜索层，并继续实现复习调度和 Rewrite 工作坊。
+Completed phase-four slice:
+
+- Refresh-safe browser preview persistence for material state.
+- Reset action for restoring the built-in sample materials.
+- Tested SQLite material repository SQL assets for list, search, upsert, archive, tags, and question types.
+
+阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程。阶段三已实现内存搜索与筛选。阶段四让前端预览具备刷新后恢复能力，并准备好后续接入 Tauri SQLite 的素材仓储 SQL。

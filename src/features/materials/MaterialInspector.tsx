@@ -6,14 +6,18 @@ interface MaterialInspectorProps {
   readonly material: MaterialDraft | null;
   readonly onChange: (patch: MaterialPatch) => void;
   readonly onArchive: () => void;
+  readonly onResetExamples: () => void;
 }
 
-export function MaterialInspector({ material, onChange, onArchive }: MaterialInspectorProps) {
+export function MaterialInspector({ material, onChange, onArchive, onResetExamples }: MaterialInspectorProps) {
   if (!material) {
     return (
       <aside className="inspector" aria-label="属性面板">
         <h2>属性</h2>
         <p className="muted">暂无选中素材。</p>
+        <button type="button" className="reset-button" onClick={onResetExamples}>
+          重置示例数据
+        </button>
       </aside>
     );
   }
@@ -136,6 +140,10 @@ export function MaterialInspector({ material, onChange, onArchive }: MaterialIns
         <span>更新时间</span>
         <strong>{new Date(material.updatedAt).toLocaleString("zh-CN")}</strong>
       </div>
+
+      <button type="button" className="reset-button" onClick={onResetExamples}>
+        重置示例数据
+      </button>
     </aside>
   );
 }

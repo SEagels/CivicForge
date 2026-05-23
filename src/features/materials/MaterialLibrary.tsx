@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MarkdownEditor } from "../editor/MarkdownEditor";
 import { MaterialInspector } from "./MaterialInspector";
 import { MaterialList } from "./MaterialList";
@@ -9,6 +9,7 @@ import {
   hasActiveFilters,
   type MaterialFilters,
 } from "./materialFilters";
+import { getBrowserMaterialStorage, loadMaterialState, saveMaterialState } from "./materialPersistence";
 import {
   archiveSelectedMaterial,
   createInitialMaterialState,
@@ -21,13 +22,30 @@ import {
 } from "./materialModel";
 
 export function MaterialLibrary() {
-  const [state, setState] = useState(createInitialMaterialState);
+  const [state, setState] = useState(() => {
+    const storage = getBrowserMaterialStorage();
+    return storage ? loadMaterialState(storage) ?? createInitialMaterialState() : createInitialMaterialState();
+  });
   const [filters, setFilters] = useState<MaterialFilters>(DEFAULT_MATERIAL_FILTERS);
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
   const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
   const availableTags = useMemo(() => getAvailableTags(activeMaterials), [activeMaterials]);
   const selectedMaterial = useMemo(() => getSelectedMaterial(state), [state]);
   const filtersActive = hasActiveFilters(filters);
+
+  useEffect(() => {
+    const storage = getBrowserMaterialStorage();
+
+    if (!storage) {
+      return;
+    }
+
+    try {
+      saveMaterialState(storage, state);
+    } catch (error) {
+      console.warn("Unable to save CivicForge material state.", error);
+    }
+  }, [state]);
 
   const updateSelected = useCallback((patch: MaterialPatch) => {
     setState((current) => updateSelectedMaterial(current, patch));
@@ -47,6 +65,11 @@ export function MaterialLibrary() {
   const createVisibleMaterial = useCallback(() => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setState((current) => createMaterial(current));
+  }, []);
+
+  const resetExampleMaterials = useCallback(() => {
+    setFilters(DEFAULT_MATERIAL_FILTERS);
+    setState(createInitialMaterialState());
   }, []);
 
   return (
@@ -106,6 +129,7 @@ export function MaterialLibrary() {
         material={selectedMaterial}
         onChange={updateSelected}
         onArchive={() => setState((current) => archiveSelectedMaterial(current))}
+        onResetExamples={resetExampleMaterials}
       />
     </main>
   );
