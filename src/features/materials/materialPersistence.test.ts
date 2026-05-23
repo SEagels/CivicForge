@@ -33,6 +33,44 @@ describe("material persistence", () => {
     expect(loaded?.materials[0].contentMd).toBe("刷新以后仍然存在。");
   });
 
+  it("normalizes legacy material payloads without review schedule fields", () => {
+    const storage = createMemoryStorage();
+    const state = createInitialMaterialState();
+    const legacyMaterials = state.materials.map(
+      ({
+        reviewEase: _reviewEase,
+        reviewIntervalDays: _reviewIntervalDays,
+        reviewRepetitions: _reviewRepetitions,
+        reviewLapses: _reviewLapses,
+        nextReviewAt: _nextReviewAt,
+        lastReviewedAt: _lastReviewedAt,
+        ...material
+      }) => material,
+    );
+
+    storage.setItem(
+      CIVICFORGE_MATERIAL_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        state: {
+          ...state,
+          materials: legacyMaterials,
+        },
+      }),
+    );
+
+    const loaded = loadMaterialState(storage);
+
+    expect(loaded?.materials[0]).toMatchObject({
+      reviewEase: 2.5,
+      reviewIntervalDays: 0,
+      reviewRepetitions: 0,
+      reviewLapses: 0,
+      nextReviewAt: null,
+      lastReviewedAt: null,
+    });
+  });
+
   it("returns null for missing, malformed, or incompatible payloads", () => {
     const storage = createMemoryStorage();
 

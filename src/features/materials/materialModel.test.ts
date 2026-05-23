@@ -4,6 +4,7 @@ import {
   createInitialMaterialState,
   createMaterial,
   getActiveMaterials,
+  reviewMaterial,
   selectMaterial,
   updateSelectedMaterial,
 } from "./materialModel";
@@ -25,6 +26,14 @@ describe("material model", () => {
     expect(selected?.status).toBe("draft");
     expect(selected?.materialType).toBe("standard-expression");
     expect(selected?.reviewEnabled).toBe(true);
+    expect(selected).toMatchObject({
+      reviewEase: 2.5,
+      reviewIntervalDays: 0,
+      reviewRepetitions: 0,
+      reviewLapses: 0,
+      nextReviewAt: null,
+      lastReviewedAt: null,
+    });
   });
 
   it("updates the selected material content and metadata", () => {
@@ -66,5 +75,19 @@ describe("material model", () => {
     expect(archived.materials.find((material) => material.id === archivedId)?.status).toBe("archived");
     expect(archived.selectedId).not.toBe(archivedId);
     expect(getActiveMaterials(archived).every((material) => material.status === "active")).toBe(true);
+  });
+
+  it("applies a review rating to a material by id", () => {
+    const state = createInitialMaterialState();
+    const reviewed = reviewMaterial(state, "mat-grid-governance", "good", new Date("2026-05-23T08:00:00.000Z"));
+    const material = reviewed.materials.find((item) => item.id === "mat-grid-governance");
+
+    expect(material).toMatchObject({
+      reviewIntervalDays: 1,
+      reviewRepetitions: 1,
+      reviewLapses: 0,
+      nextReviewAt: "2026-05-24T08:00:00.000Z",
+      lastReviewedAt: "2026-05-23T08:00:00.000Z",
+    });
   });
 });

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReviewRating } from "../../domain/enums";
 import { MarkdownEditor } from "../editor/MarkdownEditor";
+import { ReviewPanel } from "../review/ReviewPanel";
 import { MaterialInspector } from "./MaterialInspector";
 import { MaterialList } from "./MaterialList";
 import {
@@ -16,10 +18,13 @@ import {
   createMaterial,
   getActiveMaterials,
   getSelectedMaterial,
+  reviewMaterial,
   selectMaterial,
   updateSelectedMaterial,
   type MaterialPatch,
 } from "./materialModel";
+
+type AppView = "library" | "review";
 
 export function MaterialLibrary() {
   const [state, setState] = useState(() => {
@@ -27,6 +32,8 @@ export function MaterialLibrary() {
     return storage ? loadMaterialState(storage) ?? createInitialMaterialState() : createInitialMaterialState();
   });
   const [filters, setFilters] = useState<MaterialFilters>(DEFAULT_MATERIAL_FILTERS);
+  const [view, setView] = useState<AppView>("library");
+  const [reviewFocusId, setReviewFocusId] = useState<string | null>(null);
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
   const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
   const availableTags = useMemo(() => getAvailableTags(activeMaterials), [activeMaterials]);
@@ -69,7 +76,28 @@ export function MaterialLibrary() {
 
   const resetExampleMaterials = useCallback(() => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
+    setReviewFocusId(null);
     setState(createInitialMaterialState());
+  }, []);
+
+  const startSelectedReview = useCallback(() => {
+    setReviewFocusId(state.selectedId);
+    setView("review");
+  }, [state.selectedId]);
+
+  const rateMaterial = useCallback((materialId: string, rating: ReviewRating) => {
+    setReviewFocusId(null);
+    setState((current) => reviewMaterial(current, materialId, rating));
+  }, []);
+
+  const openLibrary = useCallback(() => {
+    setView("library");
+    setReviewFocusId(null);
+  }, []);
+
+  const openReview = useCallback(() => {
+    setView("review");
+    setReviewFocusId(null);
   }, []);
 
   return (
@@ -77,60 +105,74 @@ export function MaterialLibrary() {
       <aside className="sidebar" aria-label="主导航">
         <div className="brand">CivicForge</div>
         <nav>
-          <a className="active" href="#library">
+          <button type="button" className={view === "library" ? "active" : ""} onClick={openLibrary}>
             素材库
-          </a>
-          <a href="#review">复习</a>
+          </button>
+          <button type="button" className={view === "review" ? "active" : ""} onClick={openReview}>
+            复习
+          </button>
           <a href="#rewrite">Rewrite</a>
           <a href="#tags">主题标签</a>
           <a href="#settings">设置</a>
         </nav>
       </aside>
 
-      <MaterialList
-        materials={filteredMaterials}
-        selectedId={state.selectedId}
-        filters={filters}
-        totalCount={activeMaterials.length}
-        tags={availableTags}
-        hasActiveFilters={filtersActive}
-        onSelect={(id) => setState((current) => selectMaterial(current, id))}
-        onCreate={createVisibleMaterial}
-        onFiltersChange={updateFilters}
-        onClearFilters={() => setFilters(DEFAULT_MATERIAL_FILTERS)}
-      />
+      {view === "library" ? (
+        <>
+          <MaterialList
+            materials={filteredMaterials}
+            selectedId={state.selectedId}
+            filters={filters}
+            totalCount={activeMaterials.length}
+            tags={availableTags}
+            hasActiveFilters={filtersActive}
+            onSelect={(id) => setState((current) => selectMaterial(current, id))}
+            onCreate={createVisibleMaterial}
+            onFiltersChange={updateFilters}
+            onClearFilters={() => setFilters(DEFAULT_MATERIAL_FILTERS)}
+          />
 
-      <section className="editor-pane" aria-label="编辑器">
-        {selectedMaterial ? (
-          <>
-            <input
-              className="title-input"
-              value={selectedMaterial.title}
-              onChange={(event) => updateSelected({ title: event.target.value })}
-              aria-label="素材标题"
-            />
-            <MarkdownEditor
-              materialId={selectedMaterial.id}
-              value={selectedMaterial.contentMd}
-              onChange={updateContent}
-            />
-          </>
-        ) : (
-          <div className="empty-state">
-            <h1>没有可编辑素材</h1>
-            <button type="button" className="primary-button" onClick={createVisibleMaterial}>
-              新建素材
-            </button>
-          </div>
-        )}
-      </section>
+          <section className="editor-pane" aria-label="编辑器">
+            {selectedMaterial ? (
+              <>
+                <input
+                  className="title-input"
+                  value={selectedMaterial.title}
+                  onChange={(event) => updateSelected({ title: event.target.value })}
+                  aria-label="素材标题"
+                />
+                <MarkdownEditor
+                  materialId={selectedMaterial.id}
+                  value={selectedMaterial.contentMd}
+                  onChange={updateContent}
+                />
+              </>
+            ) : (
+              <div className="empty-state">
+                <h1>没有可编辑素材</h1>
+                <button type="button" className="primary-button" onClick={createVisibleMaterial}>
+                  新建素材
+                </button>
+              </div>
+            )}
+          </section>
 
-      <MaterialInspector
-        material={selectedMaterial}
-        onChange={updateSelected}
-        onArchive={() => setState((current) => archiveSelectedMaterial(current))}
-        onResetExamples={resetExampleMaterials}
-      />
+          <MaterialInspector
+            material={selectedMaterial}
+            onChange={updateSelected}
+            onArchive={() => setState((current) => archiveSelectedMaterial(current))}
+            onStartReview={startSelectedReview}
+            onResetExamples={resetExampleMaterials}
+          />
+        </>
+      ) : (
+        <ReviewPanel
+          materials={activeMaterials}
+          focusedMaterialId={reviewFocusId}
+          onRate={rateMaterial}
+          onBackToLibrary={openLibrary}
+        />
+      )}
     </main>
   );
 }

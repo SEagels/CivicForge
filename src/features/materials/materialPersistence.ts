@@ -1,4 +1,4 @@
-import type { MaterialState } from "./materialModel";
+import { normalizeMaterialState, type MaterialState } from "./materialModel";
 
 export const CIVICFORGE_MATERIAL_STORAGE_KEY = "civicforge.materials.v1";
 
@@ -36,7 +36,7 @@ export function loadMaterialState(storage: Storage): MaterialState | null {
       return null;
     }
 
-    return payload.state;
+    return normalizeMaterialState(payload.state);
   } catch {
     return null;
   }

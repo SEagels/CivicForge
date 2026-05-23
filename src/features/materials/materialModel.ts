@@ -1,6 +1,11 @@
-import type { MaterialStatus, MaterialTypeId } from "../../domain/enums";
+import type { MaterialStatus, MaterialTypeId, ReviewRating } from "../../domain/enums";
+import {
+  applyReviewRating,
+  createDefaultReviewSchedule,
+  type ReviewSchedule,
+} from "../review/reviewScheduler";
 
-export interface MaterialDraft {
+export interface MaterialDraft extends ReviewSchedule {
   readonly id: string;
   readonly title: string;
   readonly contentMd: string;
@@ -55,6 +60,7 @@ export function createInitialMaterialState(): MaterialState {
       status: "active",
       favorite: true,
       reviewEnabled: true,
+      ...createDefaultReviewSchedule(),
       updatedAt: "2026-05-22T00:00:00.000Z",
     },
     {
@@ -71,6 +77,7 @@ export function createInitialMaterialState(): MaterialState {
       status: "active",
       favorite: false,
       reviewEnabled: true,
+      ...createDefaultReviewSchedule(),
       updatedAt: "2026-05-22T00:00:00.000Z",
     },
     {
@@ -87,6 +94,7 @@ export function createInitialMaterialState(): MaterialState {
       status: "active",
       favorite: false,
       reviewEnabled: true,
+      ...createDefaultReviewSchedule(),
       updatedAt: "2026-05-22T00:00:00.000Z",
     },
   ];
@@ -120,6 +128,7 @@ export function createMaterial(state: MaterialState): MaterialState {
     status: "draft",
     favorite: false,
     reviewEnabled: true,
+    ...createDefaultReviewSchedule(),
     updatedAt: nowIso(),
   };
 
@@ -179,6 +188,37 @@ export function archiveSelectedMaterial(state: MaterialState): MaterialState {
   return {
     materials,
     selectedId: nextSelected?.id ?? null,
+  };
+}
+
+export function reviewMaterial(
+  state: MaterialState,
+  materialId: string,
+  rating: ReviewRating,
+  reviewedAt: Date = new Date(),
+): MaterialState {
+  return {
+    ...state,
+    materials: state.materials.map((material) =>
+      material.id === materialId ? applyReviewRating(material, rating, reviewedAt) : material,
+    ),
+  };
+}
+
+export function normalizeMaterialState(state: MaterialState): MaterialState {
+  const materials = state.materials.map(normalizeMaterialDraft);
+  const selectedExists = materials.some((material) => material.id === state.selectedId);
+
+  return {
+    materials,
+    selectedId: selectedExists ? state.selectedId : materials[0]?.id ?? null,
+  };
+}
+
+function normalizeMaterialDraft(material: MaterialDraft): MaterialDraft {
+  return {
+    ...createDefaultReviewSchedule(),
+    ...material,
   };
 }
 

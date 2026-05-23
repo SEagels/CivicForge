@@ -6,10 +6,17 @@ interface MaterialInspectorProps {
   readonly material: MaterialDraft | null;
   readonly onChange: (patch: MaterialPatch) => void;
   readonly onArchive: () => void;
+  readonly onStartReview: () => void;
   readonly onResetExamples: () => void;
 }
 
-export function MaterialInspector({ material, onChange, onArchive, onResetExamples }: MaterialInspectorProps) {
+export function MaterialInspector({
+  material,
+  onChange,
+  onArchive,
+  onStartReview,
+  onResetExamples,
+}: MaterialInspectorProps) {
   if (!material) {
     return (
       <aside className="inspector" aria-label="属性面板">
@@ -117,6 +124,10 @@ export function MaterialInspector({ material, onChange, onArchive, onResetExampl
         <span>加入复习</span>
       </label>
 
+      <button type="button" className="review-start-button" onClick={onStartReview} disabled={!material.reviewEnabled}>
+        开始复习这条
+      </button>
+
       <div className="stat-grid" aria-label="素材统计">
         <div>
           <span>字数</span>
@@ -132,7 +143,7 @@ export function MaterialInspector({ material, onChange, onArchive, onResetExampl
         </div>
         <div>
           <span>复习</span>
-          <strong>{material.reviewEnabled ? "开启" : "关闭"}</strong>
+          <strong>{material.reviewEnabled ? formatNextReview(material.nextReviewAt) : "关闭"}</strong>
         </div>
       </div>
 
@@ -154,4 +165,13 @@ function toggleValue(values: readonly string[], value: string): readonly string[
 
 function countText(value: string): number {
   return value.replace(/\s+/g, "").length;
+}
+
+function formatNextReview(nextReviewAt: string | null): string {
+  if (!nextReviewAt) {
+    return "新卡";
+  }
+
+  const dueAt = new Date(nextReviewAt);
+  return dueAt <= new Date() ? "到期" : dueAt.toLocaleDateString("zh-CN");
 }

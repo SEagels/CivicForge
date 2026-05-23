@@ -97,6 +97,7 @@ CivicForge/
     features/
       editor/            Milkdown Markdown editing surface
       materials/         Material library, filters, persistence helpers
+      review/            Lightweight Anki-style review scheduler and UI
     lib/db/              SQLite schema and migration assets
     styles/              Global styles
   src-tauri/             Tauri native shell and permissions
@@ -104,7 +105,7 @@ CivicForge/
   README.md              Bilingual project guide
 ```
 
-后续阶段会继续扩展 `review`、`rewrite`、`import-export`、`settings` 等功能目录。
+后续阶段会继续扩展 `rewrite`、`import-export`、`settings` 等功能目录。
 
 ## Database / 数据库说明
 
@@ -183,4 +184,11 @@ Completed phase-four slice:
 - Reset action for restoring the built-in sample materials.
 - Tested SQLite material repository SQL assets for list, search, upsert, archive, tags, and question types.
 
-阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程。阶段三已实现内存搜索与筛选。阶段四让前端预览具备刷新后恢复能力，并准备好后续接入 Tauri SQLite 的素材仓储 SQL。
+Completed phase-five slice:
+
+- Lightweight review scheduler with Again / Hard / Good / Easy ratings.
+- Due queue and today review count.
+- Review state stored on material drafts with compatibility for older preview data.
+- Focused review page and selected-material jump from the inspector.
+
+阶段一已完成工程基础与数据库落地。阶段二已先使用内存状态跑通素材库和编辑器主流程。阶段三已实现内存搜索与筛选。阶段四让前端预览具备刷新后恢复能力，并准备好后续接入 Tauri SQLite 的素材仓储 SQL。阶段五已完成轻量 Anki 式复习一期，包括到期队列、今日数量、四档反馈和从素材跳转复习。
