@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReviewRating } from "../../domain/enums";
 import { MarkdownEditor } from "../editor/MarkdownEditor";
 import { ReviewPanel } from "../review/ReviewPanel";
+import { RewritePanel } from "../rewrite/RewritePanel";
+import { getBrowserRewriteStorage, loadRewriteLogs, saveRewriteLogs } from "../rewrite/rewritePersistence";
+import { buildMaterialInputFromRewrite, type RewriteLog } from "../rewrite/rewriteWorkshop";
 import { MaterialInspector } from "./MaterialInspector";
 import { MaterialList } from "./MaterialList";
 import {
@@ -16,6 +19,7 @@ import {
   archiveSelectedMaterial,
   createInitialMaterialState,
   createMaterial,
+  createMaterialFromRewrite,
   getActiveMaterials,
   getSelectedMaterial,
   reviewMaterial,
@@ -24,7 +28,7 @@ import {
   type MaterialPatch,
 } from "./materialModel";
 
-type AppView = "library" | "review";
+type AppView = "library" | "review" | "rewrite";
 
 export function MaterialLibrary() {
   const [state, setState] = useState(() => {
@@ -34,6 +38,10 @@ export function MaterialLibrary() {
   const [filters, setFilters] = useState<MaterialFilters>(DEFAULT_MATERIAL_FILTERS);
   const [view, setView] = useState<AppView>("library");
   const [reviewFocusId, setReviewFocusId] = useState<string | null>(null);
+  const [rewriteLogs, setRewriteLogs] = useState<readonly RewriteLog[]>(() => {
+    const storage = getBrowserRewriteStorage();
+    return storage ? loadRewriteLogs(storage) : [];
+  });
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
   const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
   const availableTags = useMemo(() => getAvailableTags(activeMaterials), [activeMaterials]);
@@ -53,6 +61,20 @@ export function MaterialLibrary() {
       console.warn("Unable to save CivicForge material state.", error);
     }
   }, [state]);
+
+  useEffect(() => {
+    const storage = getBrowserRewriteStorage();
+
+    if (!storage) {
+      return;
+    }
+
+    try {
+      saveRewriteLogs(storage, rewriteLogs);
+    } catch (error) {
+      console.warn("Unable to save CivicForge rewrite logs.", error);
+    }
+  }, [rewriteLogs]);
 
   const updateSelected = useCallback((patch: MaterialPatch) => {
     setState((current) => updateSelectedMaterial(current, patch));
@@ -100,6 +122,22 @@ export function MaterialLibrary() {
     setReviewFocusId(null);
   }, []);
 
+  const openRewrite = useCallback(() => {
+    setView("rewrite");
+    setReviewFocusId(null);
+  }, []);
+
+  const saveRewriteLog = useCallback((log: RewriteLog) => {
+    setRewriteLogs((current) => [log, ...current.filter((item) => item.id !== log.id)]);
+  }, []);
+
+  const saveRewriteAsMaterial = useCallback((log: RewriteLog) => {
+    setFilters(DEFAULT_MATERIAL_FILTERS);
+    setReviewFocusId(null);
+    setState((current) => createMaterialFromRewrite(current, buildMaterialInputFromRewrite(log)));
+    setView("library");
+  }, []);
+
   return (
     <main className="desktop-shell">
       <aside className="sidebar" aria-label="主导航">
@@ -111,7 +149,9 @@ export function MaterialLibrary() {
           <button type="button" className={view === "review" ? "active" : ""} onClick={openReview}>
             复习
           </button>
-          <a href="#rewrite">Rewrite</a>
+          <button type="button" className={view === "rewrite" ? "active" : ""} onClick={openRewrite}>
+            Rewrite
+          </button>
           <a href="#tags">主题标签</a>
           <a href="#settings">设置</a>
         </nav>
@@ -165,12 +205,19 @@ export function MaterialLibrary() {
             onResetExamples={resetExampleMaterials}
           />
         </>
-      ) : (
+      ) : view === "review" ? (
         <ReviewPanel
           materials={activeMaterials}
           focusedMaterialId={reviewFocusId}
           onRate={rateMaterial}
           onBackToLibrary={openLibrary}
+        />
+      ) : (
+        <RewritePanel
+          materials={activeMaterials}
+          logs={rewriteLogs}
+          onSaveLog={saveRewriteLog}
+          onSaveAsMaterial={saveRewriteAsMaterial}
         />
       )}
     </main>

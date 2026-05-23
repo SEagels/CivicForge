@@ -4,6 +4,7 @@ import {
   createDefaultReviewSchedule,
   type ReviewSchedule,
 } from "../review/reviewScheduler";
+import type { RewriteMaterialInput } from "../rewrite/rewriteWorkshop";
 
 export interface MaterialDraft extends ReviewSchedule {
   readonly id: string;
@@ -126,6 +127,31 @@ export function createMaterial(state: MaterialState): MaterialState {
     questionTypeSlugs: ["general"],
     source: "",
     status: "draft",
+    favorite: false,
+    reviewEnabled: true,
+    ...createDefaultReviewSchedule(),
+    updatedAt: nowIso(),
+  };
+
+  return {
+    materials: [material, ...state.materials],
+    selectedId: id,
+  };
+}
+
+export function createMaterialFromRewrite(state: MaterialState, input: RewriteMaterialInput): MaterialState {
+  const id = `mat-rewrite-${Date.now().toString(36)}`;
+  const material: MaterialDraft = {
+    id,
+    title: input.title,
+    contentMd: input.contentMd,
+    excerpt: input.excerpt,
+    materialType: input.materialType,
+    topicSlug: "grassroots-governance",
+    tagNames: input.tagNames,
+    questionTypeSlugs: ["general"],
+    source: input.source,
+    status: "active",
     favorite: false,
     reviewEnabled: true,
     ...createDefaultReviewSchedule(),

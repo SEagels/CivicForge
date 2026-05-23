@@ -630,6 +630,143 @@ button:disabled {
   margin: 0;
 }
 
+.rewrite-workspace {
+  align-content: start;
+  background: #fbfaf7;
+  display: grid;
+  gap: 22px;
+  grid-column: 2 / -1;
+  min-width: 0;
+  overflow: auto;
+  padding: 30px 34px;
+}
+
+.rewrite-header {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.rewrite-header h1 {
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.rewrite-status {
+  background: #f0e9df;
+  border: 1px solid #d9d0c4;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  min-width: 92px;
+  padding: 10px 12px;
+}
+
+.rewrite-status span,
+.rewrite-textarea span,
+.rewrite-history-item span {
+  color: #6b6259;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rewrite-status strong {
+  color: #2b2824;
+  font-size: 20px;
+}
+
+.rewrite-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(280px, 1fr) minmax(280px, 1fr);
+}
+
+.rewrite-panel {
+  background: #fffdf9;
+  border: 1px solid #e3ddd4;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+}
+
+.rewrite-textarea {
+  display: grid;
+  gap: 7px;
+}
+
+.rewrite-textarea textarea,
+.prompt-preview {
+  background: #fbfaf7;
+  border: 1px solid #d8d0c5;
+  border-radius: 8px;
+  color: #24211e;
+  line-height: 1.7;
+  min-height: 280px;
+  outline: none;
+  padding: 14px;
+  resize: vertical;
+  width: 100%;
+}
+
+.prompt-preview {
+  font-size: 13px;
+}
+
+.rewrite-textarea textarea:focus {
+  border-color: #9f8061;
+  box-shadow: 0 0 0 3px rgb(127 93 58 / 14%);
+}
+
+.rewrite-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.rewrite-history {
+  display: grid;
+  gap: 12px;
+}
+
+.rewrite-history-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.rewrite-history-item {
+  background: #fffdf9;
+  border: 1px solid #e3ddd4;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.rewrite-history-item div {
+  display: grid;
+  gap: 4px;
+}
+
+.rewrite-history-item strong {
+  color: #2d2925;
+  font-size: 14px;
+}
+
+.rewrite-history-item p {
+  color: #403a34;
+  display: -webkit-box;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #eee8df;
@@ -664,17 +801,23 @@ button:disabled {
 
   .editor-pane,
   .review-workspace,
+  .rewrite-workspace,
   .material-card,
   .empty-list,
   .favorite-row,
   .stat-grid div,
   .review-card,
   .rating-button,
+  .rewrite-panel,
+  .rewrite-status,
+  .rewrite-history-item,
   .markdown-editor [data-milkdown-root],
   .search-box input,
   .filter-grid select,
   .field input,
   .field select,
+  .rewrite-textarea textarea,
+  .prompt-preview,
   .source-editor textarea {
     background: #191715;
     border-color: #39332e;
@@ -702,7 +845,11 @@ button:disabled {
   .review-card-header span,
   .review-meta span,
   .rating-button span,
-  .review-empty p {
+  .review-empty p,
+  .rewrite-status span,
+  .rewrite-textarea span,
+  .rewrite-history-item span,
+  .rewrite-history-item p {
     color: #aaa096;
   }
 
@@ -713,7 +860,9 @@ button:disabled {
   .review-summary strong,
   .review-card-header h2,
   .review-content,
-  .rating-button strong {
+  .rating-button strong,
+  .rewrite-status strong,
+  .rewrite-history-item strong {
     color: #eee8df;
   }
 

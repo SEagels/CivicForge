@@ -3,6 +3,7 @@ import {
   archiveSelectedMaterial,
   createInitialMaterialState,
   createMaterial,
+  createMaterialFromRewrite,
   getActiveMaterials,
   reviewMaterial,
   selectMaterial,
@@ -88,6 +89,31 @@ describe("material model", () => {
       reviewLapses: 0,
       nextReviewAt: "2026-05-24T08:00:00.000Z",
       lastReviewedAt: "2026-05-23T08:00:00.000Z",
+    });
+  });
+
+  it("creates and selects a material from rewrite output", () => {
+    const state = createInitialMaterialState();
+    const next = createMaterialFromRewrite(state, {
+      title: "Rewrite：改成标题句",
+      contentMd: "以精细治理托举群众幸福",
+      excerpt: "以精细治理托举群众幸福",
+      materialType: "title-sentence",
+      source: "Rewrite 工坊",
+      tagNames: ["Rewrite"],
+    });
+    const selected = next.materials.find((material) => material.id === next.selectedId);
+
+    expect(next.materials).toHaveLength(4);
+    expect(selected).toMatchObject({
+      title: "Rewrite：改成标题句",
+      contentMd: "以精细治理托举群众幸福",
+      excerpt: "以精细治理托举群众幸福",
+      materialType: "title-sentence",
+      source: "Rewrite 工坊",
+      tagNames: ["Rewrite"],
+      status: "active",
+      reviewEnabled: true,
     });
   });
 });
