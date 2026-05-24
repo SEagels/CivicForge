@@ -1,8 +1,9 @@
 import type { AppSettings, ThemeMode } from "./appSettings";
+import { getStorageDiagnostics, type StorageDiagnosticMode } from "./storageDiagnostics";
 
 export interface SettingsPanelProps {
   readonly settings: AppSettings;
-  readonly storageMode: string;
+  readonly storageMode: StorageDiagnosticMode;
   readonly materialCount: number;
   readonly rewriteLogCount: number;
   readonly onSettingsChange: (settings: AppSettings) => void;
@@ -28,6 +29,13 @@ export function SettingsPanel({
   const updateBackupReminder = (backupReminderEnabled: boolean) => {
     onSettingsChange({ ...settings, backupReminderEnabled });
   };
+
+  const diagnostics = getStorageDiagnostics({
+    storageMode,
+    materialCount,
+    rewriteLogCount,
+    backupReminderEnabled: settings.backupReminderEnabled,
+  });
 
   return (
     <section className="settings-workspace" aria-label="设置与备份">
@@ -56,7 +64,7 @@ export function SettingsPanel({
           <div className="settings-metrics">
             <div>
               <span>存储模式</span>
-              <strong>{storageMode}</strong>
+              <strong>{diagnostics.storageLabel}</strong>
             </div>
             <div>
               <span>素材条目</span>
@@ -66,6 +74,10 @@ export function SettingsPanel({
               <span>Rewrite 记录</span>
               <strong>{rewriteLogCount}</strong>
             </div>
+          </div>
+          <div className="storage-diagnostics">
+            <p>{diagnostics.storageDescription}</p>
+            <p>{diagnostics.summary}</p>
           </div>
         </section>
 
@@ -79,6 +91,10 @@ export function SettingsPanel({
             />
             <span>显示手动备份提醒</span>
           </label>
+          <div className="backup-diagnostic">
+            <strong>提醒：{diagnostics.backupLabel}</strong>
+            <span>{diagnostics.backupDescription}</span>
+          </div>
           <div className="settings-actions">
             <button type="button" className="primary-button" onClick={onExportArchive}>
               立即导出备份

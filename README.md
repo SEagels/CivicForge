@@ -74,7 +74,21 @@ npm run tauri build
 
 Native Tauri build requires Rust/Cargo.
 
-Current machine note: `rustc -V` and `cargo -V` are not available in `PATH`, so `npx tauri build` currently stops at `cargo metadata`. Install Rust from [rustup.rs](https://rustup.rs/) or your preferred Windows toolchain setup before native packaging.
+Current Windows release artifacts are generated under:
+
+```text
+src-tauri/target/release/bundle/msi/CivicForge_0.1.0_x64_en-US.msi
+src-tauri/target/release/bundle/nsis/CivicForge_0.1.0_x64-setup.exe
+```
+
+If `cargo` is installed but not visible in the current PowerShell session, prepend Cargo to `PATH` before building:
+
+```powershell
+$env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
+npx tauri build
+```
+
+当前 Windows 安装包会生成在以上 `src-tauri/target/release/bundle/` 目录中。若当前 PowerShell 找不到 `cargo`，请先把 Cargo 加入 `PATH`，再执行 `npx tauri build`。
 
 ## Test / 测试
 
