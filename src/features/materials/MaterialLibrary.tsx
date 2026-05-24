@@ -3,6 +3,7 @@ import type { ReviewRating } from "../../domain/enums";
 import { createAppDataService, type AppDataService, type StorageMode } from "../appData/appDataService";
 import { DashboardPanel } from "../dashboard/DashboardPanel";
 import { MarkdownEditor } from "../editor/MarkdownEditor";
+import { GraphPanel } from "../graph/GraphPanel";
 import { readArchiveFile, saveArchiveFile } from "../importExport/archiveFileAdapter";
 import {
   createAppArchive,
@@ -39,7 +40,7 @@ import {
   type MaterialPatch,
 } from "./materialModel";
 
-type AppView = "dashboard" | "library" | "review" | "rewrite" | "taxonomy" | "importExport" | "settings";
+type AppView = "dashboard" | "library" | "review" | "rewrite" | "graph" | "taxonomy" | "importExport" | "settings";
 
 const STORAGE_MODE_PREVIEW = "Preview localStorage";
 
@@ -167,6 +168,13 @@ export function MaterialLibrary() {
   const openRewrite = useCallback(() => openView("rewrite"), [openView]);
   const openImportExport = useCallback(() => openView("importExport"), [openView]);
 
+  const openMaterialFromGraph = useCallback((materialId: string) => {
+    setFilters(DEFAULT_MATERIAL_FILTERS);
+    setReviewFocusId(null);
+    setState((current) => selectMaterial(current, materialId));
+    setView("library");
+  }, []);
+
   const startSelectedReview = useCallback(() => {
     setReviewFocusId(state.selectedId);
     setView("review");
@@ -236,6 +244,9 @@ export function MaterialLibrary() {
           </NavButton>
           <NavButton active={view === "rewrite"} onClick={openRewrite}>
             Rewrite
+          </NavButton>
+          <NavButton active={view === "graph"} onClick={() => openView("graph")}>
+            知识图谱
           </NavButton>
           <NavButton active={view === "taxonomy"} onClick={() => openView("taxonomy")}>
             主题标签
@@ -321,6 +332,8 @@ export function MaterialLibrary() {
           onSaveLog={saveRewriteLog}
           onSaveAsMaterial={saveRewriteAsMaterial}
         />
+      ) : view === "graph" ? (
+        <GraphPanel materials={activeMaterials} onOpenMaterial={openMaterialFromGraph} />
       ) : view === "taxonomy" ? (
         <TaxonomyPanel materials={state.materials} />
       ) : view === "importExport" ? (

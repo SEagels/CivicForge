@@ -26,6 +26,12 @@ textarea {
 
 button {
   cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
 }
 
 a {
@@ -768,6 +774,7 @@ button:disabled {
 }
 
 .dashboard-workspace,
+.graph-workspace,
 .taxonomy-workspace,
 .import-export-workspace,
 .settings-workspace {
@@ -844,6 +851,7 @@ button:disabled {
 }
 
 .dashboard-grid,
+.graph-layout,
 .import-export-grid,
 .settings-grid {
   display: grid;
@@ -852,6 +860,9 @@ button:disabled {
 }
 
 .dashboard-panel,
+.graph-controls,
+.graph-stage,
+.graph-details,
 .taxonomy-section,
 .archive-section,
 .settings-section {
@@ -1020,6 +1031,204 @@ button:disabled {
   margin: 0;
 }
 
+.graph-summary {
+  background: #ffffff;
+  border: 1px solid #d8e2dc;
+  border-radius: 14px;
+  display: grid;
+  gap: 3px;
+  min-width: 120px;
+  padding: 11px 14px;
+}
+
+.graph-summary span,
+.graph-toggle-section h2,
+.graph-detail-metrics span,
+.graph-empty span {
+  color: #5f6a65;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.graph-summary strong {
+  color: #17231f;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.graph-layout {
+  grid-template-columns: minmax(210px, 240px) minmax(380px, 1fr) minmax(230px, 270px);
+}
+
+.graph-controls,
+.graph-stage,
+.graph-details {
+  align-content: start;
+}
+
+.graph-controls,
+.graph-details {
+  gap: 16px;
+}
+
+.graph-stage {
+  min-height: 620px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.graph-canvas {
+  display: block;
+  height: 100%;
+  min-height: 620px;
+  width: 100%;
+}
+
+.graph-link {
+  stroke: #cbd8d0;
+  stroke-opacity: 0.72;
+  stroke-width: 1.15;
+}
+
+.graph-link.material-link {
+  stroke: #6f9ed1;
+  stroke-dasharray: 5 5;
+}
+
+.graph-link.active {
+  stroke: #2f6f63;
+  stroke-opacity: 0.95;
+  stroke-width: 2;
+}
+
+.graph-node {
+  transition: opacity 160ms ease;
+}
+
+.graph-node.dimmed {
+  opacity: 0.24;
+}
+
+.graph-node-dot {
+  cursor: grab;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease,
+    transform 150ms ease;
+}
+
+.graph-node-dot:active {
+  cursor: grabbing;
+}
+
+.graph-node-dot:focus {
+  outline: none;
+  stroke: #2f6f63;
+}
+
+.graph-node-dot.material {
+  fill: #2f6f63;
+}
+
+.graph-node-dot.topic {
+  fill: #4d8bb5;
+}
+
+.graph-node-dot.tag {
+  fill: #9b7bd1;
+}
+
+.graph-node-dot.questionType {
+  fill: #d89a54;
+}
+
+.graph-node-dot.materialType {
+  fill: #83919a;
+}
+
+.graph-node-label {
+  fill: #23312c;
+  font-size: 13px;
+  font-weight: 700;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: #ffffff;
+  stroke-width: 4px;
+}
+
+.graph-toggle-section {
+  display: grid;
+  gap: 10px;
+}
+
+.graph-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.graph-toggle {
+  background: #f7faf8;
+  border: 1px solid #d8e2dc;
+  border-radius: 999px;
+  color: #44524d;
+  min-height: 30px;
+  padding: 0 11px;
+}
+
+.graph-toggle.active {
+  background: #e2f0eb;
+  border-color: #9fbbb0;
+  color: #23584f;
+}
+
+.graph-details h2 {
+  color: #17231f;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.graph-detail-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.graph-detail-metrics div {
+  background: #f7faf8;
+  border: 1px solid #d8e2dc;
+  border-radius: 12px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.graph-detail-metrics strong {
+  color: #17231f;
+  font-size: 14px;
+}
+
+.graph-empty {
+  align-content: center;
+  display: grid;
+  gap: 8px;
+  min-height: 100%;
+  padding: 28px;
+}
+
+.graph-empty.compact {
+  align-content: start;
+  min-height: auto;
+  padding: 0;
+}
+
+.graph-empty strong {
+  color: #17231f;
+  font-size: 16px;
+}
+
 /* Light theme refresh: neutral study surface with green actions. */
 .desktop-shell {
   background: #f5f7f5;
@@ -1049,6 +1258,7 @@ nav button.active {
 .review-workspace,
 .rewrite-workspace,
 .dashboard-workspace,
+.graph-workspace,
 .taxonomy-workspace,
 .import-export-workspace,
 .settings-workspace {
@@ -1056,6 +1266,9 @@ nav button.active {
 }
 
 .dashboard-panel,
+.graph-controls,
+.graph-stage,
+.graph-details,
 .taxonomy-section,
 .archive-section,
 .settings-section,
@@ -1196,6 +1409,7 @@ nav button.active {
 :root[data-theme="dark"] .review-workspace,
 :root[data-theme="dark"] .rewrite-workspace,
 :root[data-theme="dark"] .dashboard-workspace,
+:root[data-theme="dark"] .graph-workspace,
 :root[data-theme="dark"] .taxonomy-workspace,
 :root[data-theme="dark"] .import-export-workspace,
 :root[data-theme="dark"] .settings-workspace,
@@ -1209,6 +1423,9 @@ nav button.active {
 :root[data-theme="dark"] .rewrite-status,
 :root[data-theme="dark"] .rewrite-history-item,
 :root[data-theme="dark"] .dashboard-panel,
+:root[data-theme="dark"] .graph-controls,
+:root[data-theme="dark"] .graph-stage,
+:root[data-theme="dark"] .graph-details,
 :root[data-theme="dark"] .taxonomy-section,
 :root[data-theme="dark"] .archive-section,
 :root[data-theme="dark"] .settings-section,
@@ -1241,6 +1458,29 @@ nav button.active {
 :root[data-theme="dark"] .recent-item strong,
 :root[data-theme="dark"] .taxonomy-item strong,
 :root[data-theme="dark"] .settings-metrics strong {
+  color: #f1eadf;
+}
+
+:root[data-theme="dark"] .graph-summary,
+:root[data-theme="dark"] .graph-toggle,
+:root[data-theme="dark"] .graph-detail-metrics div {
+  background: #191715;
+  border-color: #39332e;
+}
+
+:root[data-theme="dark"] .graph-node-label {
+  fill: #f1eadf;
+  stroke: #191715;
+}
+
+:root[data-theme="dark"] .graph-link {
+  stroke: #49554f;
+}
+
+:root[data-theme="dark"] .graph-summary strong,
+:root[data-theme="dark"] .graph-details h2,
+:root[data-theme="dark"] .graph-detail-metrics strong,
+:root[data-theme="dark"] .graph-empty strong {
   color: #f1eadf;
 }
 
@@ -1288,12 +1528,19 @@ nav button.active {
   .editor-pane,
   .review-workspace,
   .rewrite-workspace,
+  .graph-workspace,
   .material-card,
   .empty-list,
   .favorite-row,
   .stat-grid div,
   .review-card,
   .rating-button,
+  .graph-controls,
+  .graph-stage,
+  .graph-details,
+  .graph-summary,
+  .graph-toggle,
+  .graph-detail-metrics div,
   .rewrite-panel,
   .rewrite-status,
   .rewrite-history-item,
@@ -1347,6 +1594,10 @@ nav button.active {
   .review-card-header h2,
   .review-content,
   .rating-button strong,
+  .graph-summary strong,
+  .graph-details h2,
+  .graph-detail-metrics strong,
+  .graph-empty strong,
   .rewrite-status strong,
   .rewrite-history-item strong {
     color: #eee8df;
@@ -1356,6 +1607,11 @@ nav button.active {
   .review-meta span {
     background: #211f1c;
     border-color: #39332e;
+  }
+
+  .graph-node-label {
+    fill: #f1eadf;
+    stroke: #191715;
   }
 
   .due-chip {
@@ -1389,6 +1645,7 @@ nav button.active {
   }
 
   .dashboard-workspace,
+  .graph-workspace,
   .taxonomy-workspace,
   .import-export-workspace,
   .settings-workspace,
@@ -1402,6 +1659,7 @@ nav button.active {
   }
 
   .dashboard-grid,
+  .graph-layout,
   .import-export-grid,
   .settings-grid,
   .taxonomy-layout {
@@ -1411,6 +1669,11 @@ nav button.active {
   .rewrite-grid,
   .rewrite-history-list {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  }
+
+  .graph-stage,
+  .graph-canvas {
+    min-height: 540px;
   }
 
   .workspace-header,
@@ -1454,6 +1717,7 @@ nav button.active {
   .editor-pane,
   .inspector,
   .dashboard-workspace,
+  .graph-workspace,
   .taxonomy-workspace,
   .import-export-workspace,
   .settings-workspace,
@@ -1475,6 +1739,7 @@ nav button.active {
 
   .editor-pane,
   .dashboard-workspace,
+  .graph-workspace,
   .taxonomy-workspace,
   .import-export-workspace,
   .settings-workspace,
@@ -1494,9 +1759,16 @@ nav button.active {
   }
 
   .rating-grid,
+  .graph-layout,
+  .graph-detail-metrics,
   .settings-metrics,
   .filter-grid,
   .rewrite-actions {
     grid-template-columns: 1fr;
+  }
+
+  .graph-stage,
+  .graph-canvas {
+    min-height: 460px;
   }
 }
