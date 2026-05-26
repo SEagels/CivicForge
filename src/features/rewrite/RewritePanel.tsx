@@ -7,6 +7,15 @@ import {
   type RewriteLog,
   type RewriteTargetId,
 } from "./rewriteWorkshop";
+import {
+  createManualTemplateProvider,
+  filterRewriteLogs,
+  getRewriteDraftFromLog,
+  getRewriteMetrics,
+  getRewritePromptCopyStatus,
+  type RewriteHistoryFilter,
+  type RewritePromptCopyState,
+} from "./rewriteWorkspace";
 
 interface RewritePanelProps {
   readonly materials: readonly MaterialDraft[];
@@ -21,8 +30,13 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
   const [originalText, setOriginalText] = useState("");
   const [extraInstruction, setExtraInstruction] = useState("");
   const [resultText, setResultText] = useState("");
+  const [historyFilter, setHistoryFilter] = useState<RewriteHistoryFilter>("all");
+  const [copyState, setCopyState] = useState<RewritePromptCopyState>("idle");
+  const [providerMessage, setProviderMessage] = useState("外部模型接口已预留，本阶段不发起网络调用。");
   const [lastSavedLog, setLastSavedLog] = useState<RewriteLog | null>(null);
-
+  const provider = useMemo(() => createManualTemplateProvider(), []);
+  const metrics = useMemo(() => getRewriteMetrics(originalText, resultText), [originalText, resultText]);
+  const filteredLogs = useMemo(() => filterRewriteLogs(logs, historyFilter), [historyFilter, logs]);
   const promptTemplate = useMemo(
     () =>
       generateRewritePrompt({
@@ -47,6 +61,20 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
     setLastSavedLog(null);
   };
 
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(promptTemplate);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+  };
+
+  const runProviderPlaceholder = async () => {
+    const result = await provider.rewrite({ promptTemplate });
+    setProviderMessage(result.ok ? "已获得模型结果。" : result.message);
+  };
+
   const saveHistory = (): RewriteLog | null => {
     if (!canSave) {
       return null;
@@ -56,6 +84,7 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
       sourceMaterialId: sourceMaterialId || null,
       targetId,
       originalText,
+      extraInstruction,
       promptTemplate,
       resultText,
     });
@@ -75,6 +104,16 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
     onSaveAsMaterial(log);
   };
 
+  const loadHistory = (log: RewriteLog) => {
+    const draft = getRewriteDraftFromLog(log);
+    setSourceMaterialId(draft.sourceMaterialId);
+    setTargetId(draft.targetId);
+    setOriginalText(draft.originalText);
+    setResultText(draft.resultText);
+    setExtraInstruction(draft.extraInstruction);
+    setLastSavedLog(log);
+  };
+
   return (
     <section className="rewrite-workspace" aria-label="Rewrite 工坊">
       <div className="rewrite-header">
@@ -88,9 +127,9 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
         </div>
       </div>
 
-      <div className="rewrite-grid">
+      <div className="rewrite-flow">
         <section className="rewrite-panel" aria-label="原文与目标">
-          <h2>原文</h2>
+          <PanelTitle step="1" title="原文" hint="导入素材或手动粘贴" />
           <label className="field">
             <span>从素材库导入</span>
             <select value={sourceMaterialId} onChange={(event) => importMaterial(event.target.value)}>
@@ -105,7 +144,13 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
 
           <label className="field">
             <span>改写目标</span>
-            <select value={targetId} onChange={(event) => setTargetId(event.target.value as RewriteTargetId)}>
+            <select
+              value={targetId}
+              onChange={(event) => {
+                setTargetId(event.target.value as RewriteTargetId);
+                setLastSavedLog(null);
+              }}
+            >
               {REWRITE_TARGETS.map((target) => (
                 <option key={target.id} value={target.id}>
                   {target.label}
@@ -137,12 +182,31 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
         </section>
 
         <section className="rewrite-panel" aria-label="提示模板">
-          <h2>提示模板</h2>
+          <PanelTitle step="2" title="提示模板" hint="复制到外部模型或手动参考" />
           <textarea className="prompt-preview" value={promptTemplate} readOnly aria-label="生成提示模板" />
+          <div className="rewrite-actions">
+            <button type="button" className="primary-button" onClick={copyPrompt}>
+              {getRewritePromptCopyStatus(copyState)}
+            </button>
+            <button type="button" className="ghost-button" onClick={runProviderPlaceholder}>
+              模型接口预留
+            </button>
+          </div>
+          <div className="rewrite-model-status">
+            <span>{provider.label}</span>
+            <strong>{providerMessage}</strong>
+          </div>
         </section>
 
         <section className="rewrite-panel" aria-label="改写结果">
-          <h2>结果</h2>
+          <PanelTitle step="3" title="改写结果" hint="编辑后保存历史或转为素材" />
+          <div className="rewrite-metrics">
+            <Metric label="原文" value={`${metrics.originalCount} 字`} />
+            <Metric label="结果" value={`${metrics.resultCount} 字`} />
+            <Metric label="变化" value={formatDelta(metrics.deltaCount)} />
+            <Metric label="比例" value={metrics.ratio === 0 ? "-" : `${metrics.ratio}x`} />
+          </div>
+
           <label className="rewrite-textarea">
             <span>手动编辑结果</span>
             <textarea
@@ -151,7 +215,7 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
                 setResultText(event.target.value);
                 setLastSavedLog(null);
               }}
-              placeholder="把生成的提示模板交给外部模型，或直接在这里手动改写..."
+              placeholder="把提示模板交给外部模型，或直接在这里手动改写..."
             />
           </label>
 
@@ -166,31 +230,61 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
         </section>
       </div>
 
+      <section className="rewrite-comparison" aria-label="原文结果对比">
+        <div className="pane-header compact">
+          <div>
+            <p className="eyebrow">Compare</p>
+            <h2>原文 / 结果对比</h2>
+          </div>
+          <span className={`rewrite-direction ${metrics.direction}`}>{getDirectionLabel(metrics.direction)}</span>
+        </div>
+        <div className="rewrite-compare-grid">
+          <ComparisonBlock title="原文" text={originalText} empty="尚未输入原文" />
+          <ComparisonBlock title="结果" text={resultText} empty="尚未填写结果" />
+        </div>
+      </section>
+
       <section className="rewrite-history" aria-label="改写历史">
         <div className="pane-header compact">
           <div>
             <p className="eyebrow">History</p>
             <h2>改写历史</h2>
           </div>
+          <label className="rewrite-history-filter">
+            <span>筛选</span>
+            <select value={historyFilter} onChange={(event) => setHistoryFilter(event.target.value as RewriteHistoryFilter)}>
+              <option value="all">全部目标</option>
+              {REWRITE_TARGETS.map((target) => (
+                <option key={target.id} value={target.id}>
+                  {target.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        {logs.length === 0 ? (
+        {filteredLogs.length === 0 ? (
           <div className="empty-list">
-            <strong>暂无改写历史</strong>
-            <span>保存结果后会出现在这里。</span>
+            <strong>暂无匹配的改写历史</strong>
+            <span>保存结果后会出现在这里，可再次载入编辑或保存为素材。</span>
           </div>
         ) : (
           <div className="rewrite-history-list">
-            {logs.slice(0, 6).map((log) => (
+            {filteredLogs.slice(0, 8).map((log) => (
               <article key={log.id} className="rewrite-history-item">
                 <div>
                   <strong>{getTargetLabel(log.targetId)}</strong>
-                  <span>{new Date(log.createdAt).toLocaleString("zh-CN")}</span>
+                  <span>{getSourceLabel(log, materials)} · {new Date(log.createdAt).toLocaleString("zh-CN")}</span>
                 </div>
                 <p>{log.resultText}</p>
-                <button type="button" className="link-button" onClick={() => onSaveAsMaterial(log)}>
-                  保存为素材
-                </button>
+                <div className="rewrite-history-actions">
+                  <button type="button" className="link-button" onClick={() => loadHistory(log)}>
+                    载入编辑
+                  </button>
+                  <button type="button" className="link-button" onClick={() => onSaveAsMaterial(log)}>
+                    保存为素材
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -200,6 +294,64 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
   );
 }
 
+function PanelTitle({ step, title, hint }: { readonly step: string; readonly title: string; readonly hint: string }) {
+  return (
+    <div className="rewrite-panel-title">
+      <span>{step}</span>
+      <div>
+        <h2>{title}</h2>
+        <p>{hint}</p>
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { readonly label: string; readonly value: string }) {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function ComparisonBlock({ title, text, empty }: { readonly title: string; readonly text: string; readonly empty: string }) {
+  return (
+    <article className="rewrite-compare-block">
+      <span>{title}</span>
+      <p>{text.trim() || empty}</p>
+    </article>
+  );
+}
+
+function formatDelta(deltaCount: number): string {
+  if (deltaCount > 0) {
+    return `+${deltaCount}`;
+  }
+
+  return `${deltaCount}`;
+}
+
+function getDirectionLabel(direction: "compressed" | "expanded" | "unchanged"): string {
+  if (direction === "compressed") {
+    return "压缩";
+  }
+
+  if (direction === "expanded") {
+    return "扩写";
+  }
+
+  return "未变化";
+}
+
 function getTargetLabel(targetId: RewriteTargetId): string {
   return REWRITE_TARGETS.find((target) => target.id === targetId)?.label ?? targetId;
+}
+
+function getSourceLabel(log: RewriteLog, materials: readonly MaterialDraft[]): string {
+  if (!log.sourceMaterialId) {
+    return "手动输入";
+  }
+
+  return materials.find((material) => material.id === log.sourceMaterialId)?.title ?? "来源素材";
 }
