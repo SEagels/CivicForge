@@ -2,6 +2,7 @@ import { loadCivicForgeDatabase, type CivicForgeDatabase } from "../../lib/db/da
 import { initializeCivicForgeDatabase } from "../../lib/db/databaseInitializer";
 import {
   createInitialMaterialState,
+  normalizeMaterialState,
   type MaterialDraft,
   type MaterialState,
 } from "../materials/materialModel";
@@ -184,10 +185,10 @@ function createMaterialStateFromRows(
     ? fallbackState.selectedId
     : materials[0]?.id ?? null;
 
-  return {
+  return normalizeMaterialState({
     materials,
     selectedId,
-  };
+  });
 }
 
 async function saveMaterialsToRepository(repository: MaterialRepository, state: MaterialState): Promise<void> {

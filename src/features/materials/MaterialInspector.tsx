@@ -1,6 +1,7 @@
 import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialDraft, MaterialPatch } from "./materialModel";
+import { getMaterialQualityReport, type MaterialQualityLevel } from "./materialQuality";
 
 interface MaterialInspectorProps {
   readonly material: MaterialDraft | null;
@@ -30,6 +31,9 @@ export function MaterialInspector({
   }
 
   const wordCount = countText(material.contentMd);
+  const qualityReport = getMaterialQualityReport(material);
+  const qualityLabel = getQualityLevelLabel(qualityReport.level);
+  const failedQualityLabels = qualityReport.checks.filter((check) => !check.passed).map((check) => check.label);
 
   return (
     <aside className="inspector" aria-label="属性面板">
@@ -115,16 +119,39 @@ export function MaterialInspector({
         <input value={material.source} onChange={(event) => onChange({ source: event.target.value })} />
       </label>
 
+      <section className={`quality-panel ${qualityReport.level}`} aria-label="素材质量">
+        <div className="quality-score-row">
+          <span>质量</span>
+          <strong>{qualityReport.score}</strong>
+          <small>{qualityLabel}</small>
+        </div>
+        {failedQualityLabels.length > 0 ? (
+          <ul>
+            {failedQualityLabels.map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>已达到复习入库标准</p>
+        )}
+      </section>
+
       <label className="switch-row">
         <input
           type="checkbox"
           checked={material.reviewEnabled}
+          disabled={!qualityReport.reviewAllowed}
           onChange={(event) => onChange({ reviewEnabled: event.target.checked })}
         />
-        <span>加入复习</span>
+        <span>{qualityReport.reviewAllowed ? "加入复习" : "质量达标后可加入复习"}</span>
       </label>
 
-      <button type="button" className="review-start-button" onClick={onStartReview} disabled={!material.reviewEnabled}>
+      <button
+        type="button"
+        className="review-start-button"
+        onClick={onStartReview}
+        disabled={!material.reviewEnabled || !qualityReport.reviewAllowed}
+      >
         开始复习这条
       </button>
 
@@ -157,6 +184,22 @@ export function MaterialInspector({
       </button>
     </aside>
   );
+}
+
+function getQualityLevelLabel(level: MaterialQualityLevel): string {
+  if (level === "candidate") {
+    return "候选";
+  }
+
+  if (level === "refining") {
+    return "待打磨";
+  }
+
+  if (level === "core") {
+    return "高价值";
+  }
+
+  return "合格";
 }
 
 function toggleValue(values: readonly string[], value: string): readonly string[] {

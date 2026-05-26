@@ -67,6 +67,25 @@ describe("review scheduler", () => {
     expect(getTodayReviewCount(materials, NOW)).toBe(3);
   });
 
+  it("excludes low quality materials even when review is enabled", () => {
+    const lowQuality = makeMaterial("low-quality", {
+      title: "一句话",
+      contentMd: "内容太短",
+      excerpt: "",
+      source: "",
+      tagNames: [],
+      questionTypeSlugs: ["general"],
+      reviewEnabled: true,
+      nextReviewAt: null,
+    });
+    const approved = makeMaterial("approved", {
+      nextReviewAt: null,
+    });
+
+    expect(getDueReviewMaterials([lowQuality, approved], NOW).map((material) => material.id)).toEqual(["approved"]);
+    expect(getTodayReviewCount([lowQuality, approved], NOW)).toBe(1);
+  });
+
   it("schedules again reviews soon and records a lapse", () => {
     const reviewed = applyReviewRating(
       makeMaterial("card", {
@@ -113,13 +132,13 @@ function makeMaterial(id: string, patch: Partial<MaterialDraft> = {}): MaterialD
   return {
     id,
     title: id,
-    contentMd: "内容",
-    excerpt: "内容",
+    contentMd: "推动治理资源下沉网格，把服务触角延伸到群众身边，提升基层治理效能。",
+    excerpt: "治理资源下沉网格，服务触角前移。",
     materialType: "standard-expression",
     topicSlug: "grassroots-governance",
-    tagNames: [],
-    questionTypeSlugs: ["general"],
-    source: "",
+    tagNames: ["网格化", "基层服务"],
+    questionTypeSlugs: ["implementation", "essay"],
+    source: "政策材料",
     status: "active",
     favorite: false,
     reviewEnabled: true,

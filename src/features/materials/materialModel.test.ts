@@ -26,7 +26,7 @@ describe("material model", () => {
     expect(selected?.title).toBe("未命名素材");
     expect(selected?.status).toBe("draft");
     expect(selected?.materialType).toBe("standard-expression");
-    expect(selected?.reviewEnabled).toBe(true);
+    expect(selected?.reviewEnabled).toBe(false);
     expect(selected).toMatchObject({
       reviewEase: 2.5,
       reviewIntervalDays: 0,
@@ -92,6 +92,34 @@ describe("material model", () => {
     });
   });
 
+  it("does not enable review for low quality material", () => {
+    const state = createMaterial(createInitialMaterialState());
+    const updated = updateSelectedMaterial(state, {
+      title: "一句话",
+      contentMd: "内容太短",
+      reviewEnabled: true,
+    });
+    const selected = updated.materials.find((material) => material.id === updated.selectedId);
+
+    expect(selected?.reviewEnabled).toBe(false);
+  });
+
+  it("allows review when a material passes the quality gate", () => {
+    const state = createMaterial(createInitialMaterialState());
+    const updated = updateSelectedMaterial(state, {
+      title: "基层治理：网格化服务",
+      contentMd: "推动治理资源下沉网格，把服务触角延伸到群众身边，提升基层治理效能。",
+      excerpt: "治理资源下沉网格，服务触角前移。",
+      source: "政策材料",
+      tagNames: ["网格化", "基层服务"],
+      questionTypeSlugs: ["implementation", "essay"],
+      reviewEnabled: true,
+    });
+    const selected = updated.materials.find((material) => material.id === updated.selectedId);
+
+    expect(selected?.reviewEnabled).toBe(true);
+  });
+
   it("creates and selects a material from rewrite output", () => {
     const state = createInitialMaterialState();
     const next = createMaterialFromRewrite(state, {
@@ -112,8 +140,8 @@ describe("material model", () => {
       materialType: "title-sentence",
       source: "Rewrite 工坊",
       tagNames: ["Rewrite"],
-      status: "active",
-      reviewEnabled: true,
+      status: "draft",
+      reviewEnabled: false,
     });
   });
 });

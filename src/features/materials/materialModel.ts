@@ -5,6 +5,7 @@ import {
   type ReviewSchedule,
 } from "../review/reviewScheduler";
 import type { RewriteMaterialInput } from "../rewrite/rewriteWorkshop";
+import { canMaterialEnterReview } from "./materialQuality";
 
 export interface MaterialDraft extends ReviewSchedule {
   readonly id: string;
@@ -128,7 +129,7 @@ export function createMaterial(state: MaterialState): MaterialState {
     source: "",
     status: "draft",
     favorite: false,
-    reviewEnabled: true,
+    reviewEnabled: false,
     ...createDefaultReviewSchedule(),
     updatedAt: nowIso(),
   };
@@ -151,9 +152,9 @@ export function createMaterialFromRewrite(state: MaterialState, input: RewriteMa
     tagNames: input.tagNames,
     questionTypeSlugs: ["general"],
     source: input.source,
-    status: "active",
+    status: "draft",
     favorite: false,
-    reviewEnabled: true,
+    reviewEnabled: false,
     ...createDefaultReviewSchedule(),
     updatedAt: nowIso(),
   };
@@ -182,16 +183,23 @@ export function updateSelectedMaterial(state: MaterialState, patch: MaterialPatc
 
   return {
     ...state,
-    materials: state.materials.map((material) =>
-      material.id === state.selectedId
-        ? {
-            ...material,
-            ...patch,
-            status: material.status === "draft" && hasMeaningfulContent(patch) ? "active" : material.status,
-            updatedAt: nowIso(),
-          }
-        : material,
-    ),
+    materials: state.materials.map((material) => {
+      if (material.id !== state.selectedId) {
+        return material;
+      }
+
+      const nextMaterial = {
+        ...material,
+        ...patch,
+        status: material.status === "draft" && hasMeaningfulContent(patch) ? "active" : material.status,
+        updatedAt: nowIso(),
+      };
+
+      return {
+        ...nextMaterial,
+        reviewEnabled: nextMaterial.reviewEnabled && canMaterialEnterReview(nextMaterial),
+      };
+    }),
   };
 }
 
@@ -242,9 +250,14 @@ export function normalizeMaterialState(state: MaterialState): MaterialState {
 }
 
 function normalizeMaterialDraft(material: MaterialDraft): MaterialDraft {
-  return {
+  const normalized = {
     ...createDefaultReviewSchedule(),
     ...material,
+  };
+
+  return {
+    ...normalized,
+    reviewEnabled: normalized.reviewEnabled && canMaterialEnterReview(normalized),
   };
 }
 

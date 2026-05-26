@@ -1,5 +1,6 @@
 import type { ReviewRating } from "../../domain/enums";
 import type { MaterialDraft } from "../materials/materialModel";
+import { canMaterialEnterReview } from "../materials/materialQuality";
 
 export interface ReviewSchedule {
   readonly reviewEase: number;
@@ -60,7 +61,7 @@ export function readReviewSchedule(material: Partial<ReviewSchedule>): ReviewSch
 }
 
 function isReviewable(material: MaterialDraft): boolean {
-  return material.reviewEnabled && (material.status === "active" || material.status === "draft");
+  return material.reviewEnabled && canMaterialEnterReview(material) && (material.status === "active" || material.status === "draft");
 }
 
 function isDueAt(material: MaterialDraft, deadline: Date): boolean {

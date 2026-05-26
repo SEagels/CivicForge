@@ -482,6 +482,10 @@ button:disabled {
 .field-group legend,
 .favorite-row span,
 .switch-row span,
+.quality-score-row span,
+.quality-score-row small,
+.quality-panel li,
+.quality-panel p,
 .stat-grid span,
 .inspector-note span {
   color: #6b6259;
@@ -622,6 +626,76 @@ button:disabled {
 .stat-grid strong {
   color: #302c28;
   font-size: 14px;
+}
+
+.quality-panel {
+  background: #f8f4ee;
+  border: 1px solid #d8d0c5;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.quality-score-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto auto;
+}
+
+.quality-score-row span,
+.quality-score-row small,
+.quality-panel li,
+.quality-panel p {
+  color: #6b6259;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quality-score-row strong {
+  color: #2d2925;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.quality-score-row small {
+  background: #eef6f1;
+  border: 1px solid #d8e2dc;
+  border-radius: 999px;
+  color: #2f6f63;
+  padding: 4px 8px;
+}
+
+.quality-panel ul {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.quality-panel p {
+  margin: 0;
+}
+
+.quality-panel.candidate .quality-score-row small {
+  background: #fff0ed;
+  border-color: #efb4aa;
+  color: #9f3d2f;
+}
+
+.quality-panel.refining .quality-score-row small {
+  background: #fff6df;
+  border-color: #ead9a6;
+  color: #846018;
+}
+
+.quality-panel.core .quality-score-row small {
+  background: #eff4fb;
+  border-color: #ccdae9;
+  color: #3f6b9a;
 }
 
 .empty-state {
@@ -2621,6 +2695,7 @@ nav button.active {
 .graph-detail-metrics strong,
 .graph-empty strong,
 .stat-grid strong,
+.quality-score-row strong,
 .inspector-note strong,
 .check-row span {
   color: var(--text-primary);
@@ -2721,6 +2796,7 @@ nav button.active {
 .material-card,
 .favorite-row,
 .field-group,
+.quality-panel,
 .stat-grid div,
 .review-summary div,
 .review-card,
@@ -3174,6 +3250,7 @@ nav button.active {
 :root[data-theme="dark"] .material-card,
 :root[data-theme="dark"] .favorite-row,
 :root[data-theme="dark"] .field-group,
+:root[data-theme="dark"] .quality-panel,
 :root[data-theme="dark"] .stat-grid div,
 :root[data-theme="dark"] .review-summary div,
 :root[data-theme="dark"] .review-card,
@@ -3284,6 +3361,7 @@ nav button.active {
 :root[data-theme="dark"] .graph-detail-metrics strong,
 :root[data-theme="dark"] .graph-empty strong,
 :root[data-theme="dark"] .stat-grid strong,
+:root[data-theme="dark"] .quality-score-row strong,
 :root[data-theme="dark"] .inspector-note strong,
 :root[data-theme="dark"] .check-row span,
 :root[data-theme="dark"] .workspace-header h1,
@@ -3303,6 +3381,10 @@ nav button.active {
 :root[data-theme="dark"] .field-group legend,
 :root[data-theme="dark"] .favorite-row span,
 :root[data-theme="dark"] .switch-row span,
+:root[data-theme="dark"] .quality-score-row span,
+:root[data-theme="dark"] .quality-score-row small,
+:root[data-theme="dark"] .quality-panel li,
+:root[data-theme="dark"] .quality-panel p,
 :root[data-theme="dark"] .stat-grid span,
 :root[data-theme="dark"] .inspector-note span,
 :root[data-theme="dark"] .review-summary span,
