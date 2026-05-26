@@ -389,6 +389,76 @@ button:disabled {
   gap: 18px;
 }
 
+.editor-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.editor-mode-toggle,
+.editor-format-buttons {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.editor-mode-toggle {
+  background: #f0ede7;
+  border: 1px solid #ddd4c7;
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.editor-mode-toggle button,
+.editor-format-button {
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 720;
+}
+
+.editor-mode-toggle button {
+  background: transparent;
+  border-radius: 999px;
+  color: #6b6259;
+  min-height: 30px;
+  padding: 0 12px;
+}
+
+.editor-mode-toggle button.active {
+  background: #fffdf9;
+  border-color: #e3ddd4;
+  box-shadow: 0 8px 18px rgba(56, 50, 43, 0.08);
+  color: #201d1b;
+}
+
+.editor-format-buttons {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.editor-format-button {
+  align-items: center;
+  background: #fffdf9;
+  border-color: #e3ddd4;
+  border-radius: 999px;
+  color: #302b26;
+  display: inline-flex;
+  font-size: 13px;
+  height: 32px;
+  justify-content: center;
+  min-width: 34px;
+  padding: 0 10px;
+}
+
+.editor-format-button:hover {
+  background: #eef6f1;
+  border-color: #bad2c7;
+  color: #2f6f63;
+}
+
 .markdown-editor [data-milkdown-root] {
   background: #fffdf9;
   border: 1px solid #e3ddd4;
@@ -404,6 +474,7 @@ button:disabled {
 .source-editor {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .source-editor span,
@@ -424,6 +495,43 @@ button:disabled {
   padding: 16px;
   resize: vertical;
   width: 100%;
+}
+
+.source-editor-frame {
+  min-width: 0;
+  position: relative;
+}
+
+.wiki-suggestions {
+  background: rgba(255, 253, 249, 0.96);
+  border: 1px solid #d8e2dc;
+  border-radius: 8px;
+  box-shadow: 0 18px 42px rgba(47, 111, 99, 0.16);
+  display: grid;
+  left: 12px;
+  max-height: 220px;
+  min-width: 220px;
+  overflow: auto;
+  padding: 6px;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 3;
+}
+
+.wiki-suggestion {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #23312c;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.wiki-suggestion:hover {
+  background: #e8f2ed;
 }
 
 .inspector {
@@ -1535,6 +1643,9 @@ nav button.active {
 :root[data-theme="dark"] .storage-chip,
 :root[data-theme="dark"] .archive-preview,
 :root[data-theme="dark"] .markdown-editor [data-milkdown-root],
+:root[data-theme="dark"] .editor-mode-toggle,
+:root[data-theme="dark"] .editor-format-button,
+:root[data-theme="dark"] .wiki-suggestions,
 :root[data-theme="dark"] .search-box input,
 :root[data-theme="dark"] .filter-grid select,
 :root[data-theme="dark"] .field input,
@@ -1546,6 +1657,28 @@ nav button.active {
 :root[data-theme="dark"] .source-editor textarea {
   background: #191715;
   border-color: #39332e;
+  color: #f1eadf;
+}
+
+:root[data-theme="dark"] .editor-mode-toggle button {
+  color: #bfb5a8;
+}
+
+:root[data-theme="dark"] .editor-mode-toggle button.active {
+  background: #28231f;
+  border-color: #473e36;
+  box-shadow: none;
+  color: #f1eadf;
+}
+
+:root[data-theme="dark"] .editor-format-button:hover,
+:root[data-theme="dark"] .wiki-suggestion:hover {
+  background: #23332d;
+  border-color: #4b6359;
+  color: #d8eadf;
+}
+
+:root[data-theme="dark"] .wiki-suggestion {
   color: #f1eadf;
 }
 
@@ -1898,6 +2031,21 @@ nav button.active {
 
   .title-input {
     font-size: 26px;
+  }
+
+  .editor-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .editor-format-buttons {
+    justify-content: flex-start;
+  }
+
+  .wiki-suggestions {
+    left: 8px;
+    min-width: 0;
+    right: 8px;
   }
 
   .editor-title-row {

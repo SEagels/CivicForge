@@ -61,6 +61,10 @@ export function MaterialLibrary() {
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
   const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
   const availableTags = useMemo(() => getAvailableTags(activeMaterials), [activeMaterials]);
+  const linkableMaterials = useMemo(
+    () => activeMaterials.map((material) => ({ id: material.id, title: material.title })),
+    [activeMaterials],
+  );
   const selectedMaterial = useMemo(() => getSelectedMaterial(state), [state]);
   const filtersActive = hasActiveFilters(filters);
   const archiveJson = useMemo(
@@ -319,6 +323,7 @@ export function MaterialLibrary() {
                 <MarkdownEditor
                   materialId={selectedMaterial.id}
                   value={selectedMaterial.contentMd}
+                  linkableMaterials={linkableMaterials}
                   onChange={updateContent}
                 />
               </>
