@@ -39,6 +39,7 @@ import {
   updateSelectedMaterial,
   type MaterialPatch,
 } from "./materialModel";
+import { formatMaterialSaveStatus, type MaterialSaveStatus } from "./materialSaveStatus";
 
 type AppView = "dashboard" | "library" | "review" | "rewrite" | "graph" | "taxonomy" | "importExport" | "settings";
 
@@ -52,8 +53,10 @@ export function MaterialLibrary() {
   const [storageMode, setStorageMode] = useState<StorageMode>(STORAGE_MODE_PREVIEW);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [rewriteLogs, setRewriteLogs] = useState<readonly RewriteLog[]>([]);
+  const [materialSaveStatus, setMaterialSaveStatus] = useState<MaterialSaveStatus>({ kind: "loading" });
   const dataServiceRef = useRef<AppDataService | null>(null);
   const hydratedRef = useRef(false);
+  const materialSaveRunRef = useRef(0);
 
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
   const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
@@ -89,6 +92,7 @@ export function MaterialLibrary() {
       setSettings(snapshot.settings);
       setStorageMode(snapshot.storageMode);
       hydratedRef.current = true;
+      setMaterialSaveStatus({ kind: "saved", savedAt: new Date().toISOString() });
     }
 
     void loadAppData();
@@ -103,9 +107,22 @@ export function MaterialLibrary() {
       return;
     }
 
-    void dataServiceRef.current?.saveMaterials(state).catch((error) => {
-      console.warn("Unable to save CivicForge material state.", error);
-    });
+    const runId = ++materialSaveRunRef.current;
+    setMaterialSaveStatus({ kind: "saving" });
+
+    void dataServiceRef.current
+      ?.saveMaterials(state)
+      .then(() => {
+        if (materialSaveRunRef.current === runId) {
+          setMaterialSaveStatus({ kind: "saved", savedAt: new Date().toISOString() });
+        }
+      })
+      .catch((error) => {
+        console.warn("Unable to save CivicForge material state.", error);
+        if (materialSaveRunRef.current === runId) {
+          setMaterialSaveStatus({ kind: "error" });
+        }
+      });
   }, [state]);
 
   useEffect(() => {
@@ -288,12 +305,17 @@ export function MaterialLibrary() {
           <section className="editor-pane" aria-label="编辑器">
             {selectedMaterial ? (
               <>
-                <input
-                  className="title-input"
-                  value={selectedMaterial.title}
-                  onChange={(event) => updateSelected({ title: event.target.value })}
-                  aria-label="素材标题"
-                />
+                <div className="editor-title-row">
+                  <input
+                    className="title-input"
+                    value={selectedMaterial.title}
+                    onChange={(event) => updateSelected({ title: event.target.value })}
+                    aria-label="素材标题"
+                  />
+                  <span className={`save-status ${materialSaveStatus.kind}`} aria-live="polite">
+                    {formatMaterialSaveStatus(materialSaveStatus)}
+                  </span>
+                </div>
                 <MarkdownEditor
                   materialId={selectedMaterial.id}
                   value={selectedMaterial.contentMd}

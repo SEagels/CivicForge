@@ -328,19 +328,60 @@ button:disabled {
   padding: 34px 52px;
 }
 
+.editor-title-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+  min-width: 0;
+}
+
 .title-input {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
   color: #201d1b;
   display: block;
+  flex: 1 1 auto;
   font-size: 32px;
   font-weight: 760;
   line-height: 1.2;
-  margin-bottom: 24px;
+  min-width: 0;
   outline: none;
   padding: 8px 6px;
   width: 100%;
+}
+
+.save-status {
+  align-items: center;
+  background: #eef6f1;
+  border: 1px solid #d8e2dc;
+  border-radius: 999px;
+  color: #4b5953;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 650;
+  height: 28px;
+  line-height: 1;
+  margin-top: 12px;
+  max-width: 180px;
+  overflow: hidden;
+  padding: 0 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.save-status.saving {
+  background: #fff6df;
+  border-color: #ead9a6;
+  color: #846018;
+}
+
+.save-status.error {
+  background: #fff0ed;
+  border-color: #efb4aa;
+  color: #9f3d2f;
 }
 
 .markdown-editor {
@@ -1074,14 +1115,70 @@ button:disabled {
 .graph-stage {
   min-height: 620px;
   padding: 0;
+  position: relative;
   overflow: hidden;
 }
 
+.graph-toolbar {
+  align-items: center;
+  backdrop-filter: blur(18px);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(216, 226, 220, 0.82);
+  border-radius: 999px;
+  box-shadow: 0 12px 34px rgba(47, 111, 99, 0.12);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 2;
+}
+
+.graph-toolbar span {
+  color: #4b5953;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+  text-align: center;
+}
+
+.graph-tool-button {
+  align-items: center;
+  background: #f7faf8;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #23312c;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 15px;
+  font-weight: 760;
+  height: 30px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 30px;
+  padding: 0 10px;
+}
+
+.graph-tool-button:hover {
+  background: #e2f0eb;
+  border-color: #bed4ca;
+}
+
+.graph-tool-button.wide {
+  font-size: 12px;
+}
+
 .graph-canvas {
+  cursor: grab;
   display: block;
   height: 100%;
   min-height: 620px;
   width: 100%;
+}
+
+.graph-canvas.panning {
+  cursor: grabbing;
 }
 
 .graph-link {
@@ -1461,11 +1558,44 @@ nav button.active {
   color: #f1eadf;
 }
 
+:root[data-theme="dark"] .save-status {
+  background: #1d2a24;
+  border-color: #344f43;
+  color: #c9d8d0;
+}
+
+:root[data-theme="dark"] .save-status.saving {
+  background: #302817;
+  border-color: #604a1f;
+  color: #e8c77b;
+}
+
+:root[data-theme="dark"] .save-status.error {
+  background: #321d1b;
+  border-color: #6c3830;
+  color: #efb4aa;
+}
+
 :root[data-theme="dark"] .graph-summary,
+:root[data-theme="dark"] .graph-toolbar,
 :root[data-theme="dark"] .graph-toggle,
 :root[data-theme="dark"] .graph-detail-metrics div {
   background: #191715;
   border-color: #39332e;
+}
+
+:root[data-theme="dark"] .graph-tool-button {
+  background: #23201d;
+  color: #f1eadf;
+}
+
+:root[data-theme="dark"] .graph-tool-button:hover {
+  background: #2d332f;
+  border-color: #4b6359;
+}
+
+:root[data-theme="dark"] .graph-toolbar span {
+  color: #bfb5a8;
 }
 
 :root[data-theme="dark"] .graph-node-label {
@@ -1559,6 +1689,24 @@ nav button.active {
 
   .title-input {
     color: #f1eadf;
+  }
+
+  .save-status {
+    background: #1d2a24;
+    border-color: #344f43;
+    color: #c9d8d0;
+  }
+
+  .save-status.saving {
+    background: #302817;
+    border-color: #604a1f;
+    color: #e8c77b;
+  }
+
+  .save-status.error {
+    background: #321d1b;
+    border-color: #6c3830;
+    color: #efb4aa;
   }
 
   .material-meta,
@@ -1750,6 +1898,15 @@ nav button.active {
 
   .title-input {
     font-size: 26px;
+  }
+
+  .editor-title-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .save-status {
+    margin-top: 0;
   }
 
   .workspace-header h1,

@@ -8,6 +8,7 @@ import {
   type GraphNodeKind,
   type KnowledgeGraphNode,
 } from "./graphModel";
+import { applyGraphZoom, DEFAULT_GRAPH_VIEWPORT, type GraphViewport } from "./graphViewport";
 
 export interface GraphPanelProps {
   readonly materials: readonly MaterialDraft[];
@@ -36,6 +37,7 @@ export function GraphPanel({ materials, onOpenMaterial }: GraphPanelProps) {
   const [edgeKinds, setEdgeKinds] = useState<readonly GraphEdgeKind[]>(EDGE_KIND_OPTIONS.map((option) => option.kind));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [viewport, setViewport] = useState<GraphViewport>(DEFAULT_GRAPH_VIEWPORT);
   const graph = useMemo(() => buildKnowledgeGraph(materials), [materials]);
   const filteredGraph = useMemo(
     () =>
@@ -61,6 +63,14 @@ export function GraphPanel({ materials, onOpenMaterial }: GraphPanelProps) {
 
   const toggleEdgeKind = (kind: GraphEdgeKind) => {
     setEdgeKinds((current) => toggleValue(current, kind, EDGE_KIND_OPTIONS.map((option) => option.kind)));
+  };
+
+  const zoomIn = () => {
+    setViewport((current) => applyGraphZoom(current, { anchorX: 310, anchorY: 310, deltaY: -260 }));
+  };
+
+  const zoomOut = () => {
+    setViewport((current) => applyGraphZoom(current, { anchorX: 310, anchorY: 310, deltaY: 260 }));
   };
 
   return (
@@ -103,13 +113,27 @@ export function GraphPanel({ materials, onOpenMaterial }: GraphPanelProps) {
         </aside>
 
         <section className="graph-stage" aria-label="图谱画布">
+          <div className="graph-toolbar" aria-label="图谱视图控制">
+            <button type="button" className="graph-tool-button" onClick={zoomOut}>
+              -
+            </button>
+            <span>{Math.round(viewport.scale * 100)}%</span>
+            <button type="button" className="graph-tool-button" onClick={zoomIn}>
+              +
+            </button>
+            <button type="button" className="graph-tool-button wide" onClick={() => setViewport(DEFAULT_GRAPH_VIEWPORT)}>
+              重置
+            </button>
+          </div>
           {filteredGraph.nodes.length > 0 ? (
             <GraphCanvas
               graph={filteredGraph}
               selectedNodeId={selectedNodeId}
               hoveredNodeId={hoveredNodeId}
+              viewport={viewport}
               onSelectNode={setSelectedNodeId}
               onHoverNode={setHoveredNodeId}
+              onViewportChange={setViewport}
             />
           ) : (
             <div className="graph-empty">

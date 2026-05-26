@@ -1,13 +1,16 @@
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type SimulationNodeDatum } from "d3-force";
-import { useMemo, useRef, useState, type PointerEvent } from "react";
+import { useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import type { KnowledgeGraph, KnowledgeGraphEdge, KnowledgeGraphNode } from "./graphModel";
+import { applyGraphPan, applyGraphZoom, type GraphViewport } from "./graphViewport";
 
 interface GraphCanvasProps {
   readonly graph: KnowledgeGraph;
   readonly selectedNodeId: string | null;
   readonly hoveredNodeId: string | null;
+  readonly viewport: GraphViewport;
   readonly onSelectNode: (nodeId: string) => void;
   readonly onHoverNode: (nodeId: string | null) => void;
+  readonly onViewportChange: (viewport: GraphViewport) => void;
 }
 
 interface PositionedNode extends KnowledgeGraphNode, SimulationNodeDatum {
@@ -23,11 +26,16 @@ export function GraphCanvas({
   graph,
   selectedNodeId,
   hoveredNodeId,
+  viewport,
   onSelectNode,
   onHoverNode,
+  onViewportChange,
 }: GraphCanvasProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [panStart, setPanStart] = useState<{ readonly x: number; readonly y: number; readonly viewport: GraphViewport } | null>(
+    null,
+  );
   const [manualPositions, setManualPositions] = useState<Record<string, { readonly x: number; readonly y: number }>>({});
   const layout = useMemo(() => buildLayout(graph, manualPositions), [graph, manualPositions]);
   const activeNodeId = hoveredNodeId ?? selectedNodeId;
@@ -44,7 +52,7 @@ export function GraphCanvas({
       return;
     }
 
-    const point = getSvgPoint(svgRef.current, event);
+    const point = getGraphPoint(svgRef.current, event, viewport);
 
     if (!point) {
       return;
@@ -60,59 +68,113 @@ export function GraphCanvas({
     setDraggedNodeId(null);
   };
 
+  const zoomCanvas = (event: WheelEvent<SVGSVGElement>) => {
+    event.preventDefault();
+    const point = getSvgPoint(svgRef.current, event);
+
+    if (!point) {
+      return;
+    }
+
+    onViewportChange(
+      applyGraphZoom(viewport, {
+        anchorX: point.x,
+        anchorY: point.y,
+        deltaY: event.deltaY,
+      }),
+    );
+  };
+
+  const startPan = (event: PointerEvent<SVGSVGElement>) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setPanStart({
+      x: event.clientX,
+      y: event.clientY,
+      viewport,
+    });
+  };
+
+  const movePan = (event: PointerEvent<SVGSVGElement>) => {
+    if (!panStart) {
+      return;
+    }
+
+    onViewportChange(
+      applyGraphPan(panStart.viewport, {
+        deltaX: event.clientX - panStart.x,
+        deltaY: event.clientY - panStart.y,
+      }),
+    );
+  };
+
+  const stopPan = () => {
+    setPanStart(null);
+  };
+
   return (
     <svg
       ref={svgRef}
-      className="graph-canvas"
+      className={panStart ? "graph-canvas panning" : "graph-canvas"}
       role="img"
       aria-label="CivicForge knowledge graph"
       viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
+      onWheel={zoomCanvas}
+      onPointerDown={startPan}
+      onPointerMove={movePan}
+      onPointerUp={stopPan}
+      onPointerCancel={stopPan}
     >
-      <g className="graph-links">
-        {layout.edges.map((edge) => (
-          <line
-            key={edge.id}
-            className={getEdgeClassName(edge, activeNodeId)}
-            x1={edge.source.x}
-            y1={edge.source.y}
-            x2={edge.target.x}
-            y2={edge.target.y}
-          />
-        ))}
-      </g>
-      <g className="graph-nodes">
-        {layout.nodes.map((node) => {
-          const dimmed = Boolean(activeNodeId && node.id !== activeNodeId && !neighborIds.has(node.id));
-          const showLabel = node.kind === "material" || node.id === activeNodeId || neighborIds.has(node.id);
+      <g transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`}>
+        <g className="graph-links">
+          {layout.edges.map((edge) => (
+            <line
+              key={edge.id}
+              className={getEdgeClassName(edge, activeNodeId)}
+              x1={edge.source.x}
+              y1={edge.source.y}
+              x2={edge.target.x}
+              y2={edge.target.y}
+            />
+          ))}
+        </g>
+        <g className="graph-nodes">
+          {layout.nodes.map((node) => {
+            const dimmed = Boolean(activeNodeId && node.id !== activeNodeId && !neighborIds.has(node.id));
+            const showLabel = node.kind === "material" || node.id === activeNodeId || neighborIds.has(node.id);
 
-          return (
-            <g
-              key={node.id}
-              className={dimmed ? "graph-node dimmed" : "graph-node"}
-              transform={`translate(${node.x} ${node.y})`}
-              onPointerEnter={() => onHoverNode(node.id)}
-              onPointerLeave={() => onHoverNode(null)}
-            >
-              <circle
-                className={`graph-node-dot ${node.kind}`}
-                r={getNodeRadius(node.kind)}
-                tabIndex={0}
-                onClick={() => onSelectNode(node.id)}
-                onPointerDown={(event) => startDrag(event, node.id)}
-                onPointerMove={moveDrag}
-                onPointerUp={stopDrag}
-                onPointerCancel={stopDrag}
+            return (
+              <g
+                key={node.id}
+                className={dimmed ? "graph-node dimmed" : "graph-node"}
+                transform={`translate(${node.x} ${node.y})`}
+                onPointerEnter={() => onHoverNode(node.id)}
+                onPointerLeave={() => onHoverNode(null)}
               >
-                <title>{node.label}</title>
-              </circle>
-              {showLabel ? (
-                <text className="graph-node-label" x={getNodeRadius(node.kind) + 7} y="4">
-                  {node.label}
-                </text>
-              ) : null}
-            </g>
-          );
-        })}
+                <circle
+                  className={`graph-node-dot ${node.kind}`}
+                  r={getNodeRadius(node.kind)}
+                  tabIndex={0}
+                  onClick={() => onSelectNode(node.id)}
+                  onPointerDown={(event) => startDrag(event, node.id)}
+                  onPointerMove={moveDrag}
+                  onPointerUp={stopDrag}
+                  onPointerCancel={stopDrag}
+                >
+                  <title>{node.label}</title>
+                </circle>
+                {showLabel ? (
+                  <text className="graph-node-label" x={getNodeRadius(node.kind) + 7} y="4">
+                    {node.label}
+                  </text>
+                ) : null}
+              </g>
+            );
+          })}
+        </g>
       </g>
     </svg>
   );
@@ -210,7 +272,27 @@ function getNodeRadius(kind: KnowledgeGraphNode["kind"]): number {
   return 8;
 }
 
-function getSvgPoint(svg: SVGSVGElement | null, event: PointerEvent<SVGCircleElement>): { readonly x: number; readonly y: number } | null {
+function getGraphPoint(
+  svg: SVGSVGElement | null,
+  event: PointerEvent<SVGCircleElement>,
+  viewport: GraphViewport,
+): { readonly x: number; readonly y: number } | null {
+  const point = getSvgPoint(svg, event);
+
+  if (!point) {
+    return null;
+  }
+
+  return {
+    x: Math.max(24, Math.min(CANVAS_WIDTH - 24, (point.x - viewport.x) / viewport.scale)),
+    y: Math.max(24, Math.min(CANVAS_HEIGHT - 24, (point.y - viewport.y) / viewport.scale)),
+  };
+}
+
+function getSvgPoint(
+  svg: SVGSVGElement | null,
+  event: PointerEvent<SVGCircleElement> | PointerEvent<SVGSVGElement> | WheelEvent<SVGSVGElement>,
+): { readonly x: number; readonly y: number } | null {
   if (!svg) {
     return null;
   }
@@ -226,8 +308,5 @@ function getSvgPoint(svg: SVGSVGElement | null, event: PointerEvent<SVGCircleEle
   }
 
   const transformed = point.matrixTransform(matrix.inverse());
-  return {
-    x: Math.max(24, Math.min(CANVAS_WIDTH - 24, transformed.x)),
-    y: Math.max(24, Math.min(CANVAS_HEIGHT - 24, transformed.y)),
-  };
+  return transformed;
 }
