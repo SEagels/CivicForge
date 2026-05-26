@@ -29,6 +29,20 @@ describe("material quality", () => {
     );
   });
 
+  it("keeps high-scoring source candidates in refining while required checks are missing", () => {
+    const report = getMaterialQualityReport(
+      makeMaterial({
+        source: "国务院",
+        questionTypeSlugs: ["general"],
+      }),
+    );
+
+    expect(report.score).toBeGreaterThanOrEqual(70);
+    expect(report.level).toBe("refining");
+    expect(report.reviewAllowed).toBe(false);
+    expect(report.failedRequiredChecks).toEqual(["specific-question-type"]);
+  });
+
   it("marks empty drafts as candidates that cannot enter review", () => {
     const report = getMaterialQualityReport(
       makeMaterial({

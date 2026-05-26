@@ -1,10 +1,10 @@
 import type { MaterialStatus, MaterialTypeId, ReviewRating } from "../../domain/enums";
+import type { RewriteMaterialInput } from "../rewrite/rewriteWorkshop";
 import {
   applyReviewRating,
   createDefaultReviewSchedule,
   type ReviewSchedule,
 } from "../review/reviewScheduler";
-import type { RewriteMaterialInput } from "../rewrite/rewriteWorkshop";
 import { canMaterialEnterReview } from "./materialQuality";
 
 export interface MaterialDraft extends ReviewSchedule {
@@ -142,6 +142,15 @@ export function createMaterial(state: MaterialState): MaterialState {
 
 export function createMaterialFromRewrite(state: MaterialState, input: RewriteMaterialInput): MaterialState {
   const id = `mat-rewrite-${Date.now().toString(36)}`;
+  return createMaterialFromInput(state, input, id);
+}
+
+export function createMaterialFromSource(state: MaterialState, input: RewriteMaterialInput): MaterialState {
+  const id = `mat-source-${Date.now().toString(36)}`;
+  return createMaterialFromInput(state, input, id);
+}
+
+function createMaterialFromInput(state: MaterialState, input: RewriteMaterialInput, id: string): MaterialState {
   const material: MaterialDraft = {
     id,
     title: input.title,

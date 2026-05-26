@@ -50,7 +50,7 @@ export function getMaterialQualityReport(material: MaterialDraft): MaterialQuali
       scoreReuse(material) +
       scoreSpecificity(material),
   );
-  const level = getQualityLevel(score, material.favorite);
+  const level = getQualityLevel(score, material.favorite, failedRequiredChecks.length > 0);
 
   return {
     score,
@@ -208,12 +208,12 @@ function scoreSpecificity(material: MaterialDraft): number {
   return score;
 }
 
-function getQualityLevel(score: number, favorite: boolean): MaterialQualityLevel {
+function getQualityLevel(score: number, favorite: boolean, hasRequiredFailures: boolean): MaterialQualityLevel {
   if (score < 40) {
     return "candidate";
   }
 
-  if (score < 70) {
+  if (score < 70 || hasRequiredFailures) {
     return "refining";
   }
 

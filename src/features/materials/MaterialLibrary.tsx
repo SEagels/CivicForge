@@ -14,7 +14,7 @@ import {
 import { ImportExportPanel } from "../importExport/ImportExportPanel";
 import { ReviewPanel } from "../review/ReviewPanel";
 import { RewritePanel } from "../rewrite/RewritePanel";
-import { buildMaterialInputFromRewrite, type RewriteLog } from "../rewrite/rewriteWorkshop";
+import { buildMaterialInputFromRewrite, type RewriteLog, type RewriteMaterialInput } from "../rewrite/rewriteWorkshop";
 import { DEFAULT_APP_SETTINGS, applyThemeMode, type AppSettings } from "../settings/appSettings";
 import { SettingsPanel } from "../settings/SettingsPanel";
 import { TaxonomyPanel } from "../taxonomy/TaxonomyPanel";
@@ -31,6 +31,7 @@ import {
   archiveSelectedMaterial,
   createInitialMaterialState,
   createMaterial,
+  createMaterialFromSource,
   createMaterialFromRewrite,
   getActiveMaterials,
   getSelectedMaterial,
@@ -217,6 +218,13 @@ export function MaterialLibrary() {
     setView("library");
   }, []);
 
+  const saveSourceAsMaterial = useCallback((input: RewriteMaterialInput) => {
+    setFilters(DEFAULT_MATERIAL_FILTERS);
+    setReviewFocusId(null);
+    setState((current) => createMaterialFromSource(current, input));
+    setView("library");
+  }, []);
+
   const downloadArchive = useCallback(() => {
     void saveArchiveFile(archiveJson, createArchiveFilename()).catch((error) => {
       console.warn("Unable to export CivicForge archive.", error);
@@ -369,6 +377,7 @@ export function MaterialLibrary() {
           onDownloadArchive={downloadArchive}
           onRestoreArchive={restoreArchive}
           onRestoreFromFile={restoreArchiveFromFile}
+          onCreateSourceMaterial={saveSourceAsMaterial}
         />
       ) : (
         <SettingsPanel

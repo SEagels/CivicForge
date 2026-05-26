@@ -1340,6 +1340,55 @@ button:disabled {
   gap: 10px;
 }
 
+.source-import-section {
+  grid-column: 1 / -1;
+}
+
+.source-import-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+}
+
+.source-card-preview {
+  align-items: center;
+  background: #fbfaf7;
+  border: 1px solid #e4dcd1;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px;
+}
+
+.source-card-preview div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.source-card-preview span {
+  color: #6b6259;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.source-card-preview strong {
+  color: #2d2925;
+  font-size: 15px;
+}
+
+.source-card-preview p {
+  color: #6b6259;
+  display: -webkit-box;
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .inline-switch {
   border-top: 0;
   margin-top: 0;
@@ -2302,6 +2351,8 @@ nav button.active {
   .graph-layout,
   .graph-detail-metrics,
   .settings-metrics,
+  .source-import-grid,
+  .source-card-preview,
   .filter-grid,
   .rewrite-flow,
   .rewrite-compare-grid,
@@ -2633,6 +2684,8 @@ nav button.active {
 .settings-metrics span,
 .storage-diagnostics p,
 .backup-diagnostic span,
+.source-card-preview span,
+.source-card-preview p,
 .restore-message,
 .graph-summary span,
 .graph-toggle-section h2,
@@ -2690,6 +2743,7 @@ nav button.active {
 .taxonomy-item strong,
 .settings-metrics strong,
 .backup-diagnostic strong,
+.source-card-preview strong,
 .graph-summary strong,
 .graph-details h2,
 .graph-detail-metrics strong,
@@ -2819,6 +2873,7 @@ nav button.active {
 .settings-metrics div,
 .storage-diagnostics,
 .backup-diagnostic,
+.source-card-preview,
 .markdown-editor [data-milkdown-root] {
   backdrop-filter: blur(18px) saturate(1.08);
   -webkit-backdrop-filter: blur(18px) saturate(1.08);
@@ -3273,6 +3328,7 @@ nav button.active {
 :root[data-theme="dark"] .settings-metrics div,
 :root[data-theme="dark"] .storage-diagnostics,
 :root[data-theme="dark"] .backup-diagnostic,
+:root[data-theme="dark"] .source-card-preview,
 :root[data-theme="dark"] .markdown-editor [data-milkdown-root] {
   background: var(--surface-panel);
   border-color: var(--line-soft);
@@ -3356,6 +3412,7 @@ nav button.active {
 :root[data-theme="dark"] .taxonomy-item strong,
 :root[data-theme="dark"] .settings-metrics strong,
 :root[data-theme="dark"] .backup-diagnostic strong,
+:root[data-theme="dark"] .source-card-preview strong,
 :root[data-theme="dark"] .graph-summary strong,
 :root[data-theme="dark"] .graph-details h2,
 :root[data-theme="dark"] .graph-detail-metrics strong,
@@ -3411,6 +3468,8 @@ nav button.active {
 :root[data-theme="dark"] .settings-metrics span,
 :root[data-theme="dark"] .storage-diagnostics p,
 :root[data-theme="dark"] .backup-diagnostic span,
+:root[data-theme="dark"] .source-card-preview span,
+:root[data-theme="dark"] .source-card-preview p,
 :root[data-theme="dark"] .restore-message,
 :root[data-theme="dark"] .graph-summary span,
 :root[data-theme="dark"] .graph-toggle-section h2,

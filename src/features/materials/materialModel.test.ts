@@ -3,6 +3,7 @@ import {
   archiveSelectedMaterial,
   createInitialMaterialState,
   createMaterial,
+  createMaterialFromSource,
   createMaterialFromRewrite,
   getActiveMaterials,
   reviewMaterial,
@@ -142,6 +143,28 @@ describe("material model", () => {
       tagNames: ["Rewrite"],
       status: "draft",
       reviewEnabled: false,
+    });
+  });
+
+  it("creates a draft candidate material from an imported source", () => {
+    const state = createInitialMaterialState();
+    const next = createMaterialFromSource(state, {
+      title: "资料：推进基层治理现代化",
+      contentMd: "推动治理资源下沉基层，提升服务群众能力。",
+      excerpt: "推动治理资源下沉基层，提升服务群众能力。",
+      materialType: "standard-expression",
+      source: "国务院",
+      tagNames: ["资料导入"],
+    });
+    const selected = next.materials.find((material) => material.id === next.selectedId);
+
+    expect(selected).toMatchObject({
+      title: "资料：推进基层治理现代化",
+      source: "国务院",
+      tagNames: ["资料导入"],
+      status: "draft",
+      reviewEnabled: false,
+      questionTypeSlugs: ["general"],
     });
   });
 });
