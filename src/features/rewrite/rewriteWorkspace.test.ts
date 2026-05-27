@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   createManualTemplateProvider,
   filterRewriteLogs,
+  getRewriteDraftFromMaterial,
   getRewriteDraftFromLog,
   getRewriteMetrics,
   getRewritePromptCopyStatus,
   type RewriteModelProvider,
 } from "./rewriteWorkspace";
+import type { MaterialDraft } from "../materials/materialModel";
 import type { RewriteLog } from "./rewriteWorkshop";
 
 describe("rewrite workspace helpers", () => {
@@ -48,6 +50,16 @@ describe("rewrite workspace helpers", () => {
     });
   });
 
+  it("creates an editable rewrite draft from a source material", () => {
+    expect(getRewriteDraftFromMaterial(createMaterial())).toEqual({
+      sourceMaterialId: "material-1",
+      targetId: "compress",
+      originalText: "基层治理正文",
+      resultText: "",
+      extraInstruction: "请保留来源信息，先提炼为可复用申论表达。",
+    });
+  });
+
   it("formats prompt copy status labels", () => {
     expect(getRewritePromptCopyStatus("idle")).toBe("复制提示词");
     expect(getRewritePromptCopyStatus("copied")).toBe("已复制");
@@ -76,5 +88,29 @@ function createLog(id: string, targetId: RewriteLog["targetId"]): RewriteLog {
     status: "saved",
     createdAt: "2026-05-26T08:00:00.000Z",
     updatedAt: "2026-05-26T08:00:00.000Z",
+  };
+}
+
+function createMaterial(): MaterialDraft {
+  return {
+    id: "material-1",
+    title: "基层治理素材",
+    contentMd: "基层治理正文",
+    excerpt: "基层治理摘要",
+    materialType: "standard-expression",
+    topicSlug: "grassroots-governance",
+    tagNames: ["基层服务"],
+    questionTypeSlugs: ["general"],
+    source: "国务院",
+    status: "draft",
+    favorite: false,
+    reviewEnabled: false,
+    reviewEase: 2.5,
+    reviewIntervalDays: 0,
+    reviewRepetitions: 0,
+    reviewLapses: 0,
+    nextReviewAt: null,
+    lastReviewedAt: null,
+    updatedAt: "2026-05-22T08:00:00.000Z",
   };
 }

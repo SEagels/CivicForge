@@ -2,12 +2,14 @@ import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialDraft, MaterialPatch } from "./materialModel";
 import { getMaterialQualityReport, type MaterialQualityLevel } from "./materialQuality";
+import { getMaterialWorkbenchStatus } from "./materialWorkbench";
 
 interface MaterialInspectorProps {
   readonly material: MaterialDraft | null;
   readonly onChange: (patch: MaterialPatch) => void;
   readonly onArchive: () => void;
   readonly onStartReview: () => void;
+  readonly onStartRewrite: () => void;
   readonly onResetExamples: () => void;
 }
 
@@ -16,6 +18,7 @@ export function MaterialInspector({
   onChange,
   onArchive,
   onStartReview,
+  onStartRewrite,
   onResetExamples,
 }: MaterialInspectorProps) {
   if (!material) {
@@ -32,6 +35,7 @@ export function MaterialInspector({
 
   const wordCount = countText(material.contentMd);
   const qualityReport = getMaterialQualityReport(material);
+  const workbenchStatus = getMaterialWorkbenchStatus(material);
   const qualityLabel = getQualityLevelLabel(qualityReport.level);
   const failedQualityLabels = qualityReport.checks.filter((check) => !check.passed).map((check) => check.label);
 
@@ -136,6 +140,37 @@ export function MaterialInspector({
         )}
       </section>
 
+      <section className={`workbench-panel ${workbenchStatus.stage}`} aria-label="素材加工台">
+        <div className="workbench-panel-header">
+          <div>
+            <span>加工台</span>
+            <strong>{getWorkbenchStepLabel(workbenchStatus.primaryStep)}</strong>
+          </div>
+          <small>{workbenchStatus.actionLabel}</small>
+        </div>
+        {workbenchStatus.failedCheckLabels.length > 0 ? (
+          <ul>
+            {workbenchStatus.failedCheckLabels.map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>这条素材已经满足质量门槛，可以进入复习。</p>
+        )}
+        <div className="workbench-actions">
+          {workbenchStatus.primaryStep === "review" ? (
+            <button type="button" className="primary-button" onClick={() => onChange({ reviewEnabled: true })}>
+              加入复习
+            </button>
+          ) : null}
+          {workbenchStatus.primaryStep !== "done" ? (
+            <button type="button" className="ghost-button" onClick={onStartRewrite}>
+              去 Rewrite 打磨
+            </button>
+          ) : null}
+        </div>
+      </section>
+
       <label className="switch-row">
         <input
           type="checkbox"
@@ -184,6 +219,22 @@ export function MaterialInspector({
       </button>
     </aside>
   );
+}
+
+function getWorkbenchStepLabel(step: ReturnType<typeof getMaterialWorkbenchStatus>["primaryStep"]): string {
+  if (step === "rewrite") {
+    return "先打磨正文";
+  }
+
+  if (step === "classify") {
+    return "先补齐分类";
+  }
+
+  if (step === "review") {
+    return "可加入复习";
+  }
+
+  return "已完成";
 }
 
 function getQualityLevelLabel(level: MaterialQualityLevel): string {

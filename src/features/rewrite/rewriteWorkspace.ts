@@ -1,3 +1,4 @@
+import type { MaterialDraft } from "../materials/materialModel";
 import type { RewriteLog, RewriteTargetId } from "./rewriteWorkshop";
 
 export type RewriteHistoryFilter = RewriteTargetId | "all";
@@ -66,6 +67,16 @@ export function getRewriteDraftFromLog(log: RewriteLog): RewriteDraft {
     originalText: log.originalText,
     resultText: log.resultText,
     extraInstruction: "",
+  };
+}
+
+export function getRewriteDraftFromMaterial(material: MaterialDraft): RewriteDraft {
+  return {
+    sourceMaterialId: material.id,
+    targetId: "compress",
+    originalText: material.contentMd || material.excerpt,
+    resultText: "",
+    extraInstruction: "请保留来源信息，先提炼为可复用申论表达。",
   };
 }
 

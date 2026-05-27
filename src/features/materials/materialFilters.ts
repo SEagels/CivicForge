@@ -1,6 +1,7 @@
 import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialDraft } from "./materialModel";
+import { isWorkbenchCandidate } from "./materialWorkbench";
 
 export interface MaterialFilters {
   readonly query: string;
@@ -10,6 +11,7 @@ export interface MaterialFilters {
   readonly tagName: string;
   readonly favoriteOnly: boolean;
   readonly reviewOnly: boolean;
+  readonly workbenchOnly: boolean;
 }
 
 export const DEFAULT_MATERIAL_FILTERS: MaterialFilters = {
@@ -20,6 +22,7 @@ export const DEFAULT_MATERIAL_FILTERS: MaterialFilters = {
   tagName: "",
   favoriteOnly: false,
   reviewOnly: false,
+  workbenchOnly: false,
 };
 
 const topicNameBySlug: ReadonlyMap<string, string> = new Map(BUILTIN_TOPICS.map((topic) => [topic.slug, topic.name]));
@@ -61,6 +64,10 @@ export function filterMaterials(
       return false;
     }
 
+    if (filters.workbenchOnly && !isWorkbenchCandidate(material)) {
+      return false;
+    }
+
     if (!query) {
       return true;
     }
@@ -83,7 +90,8 @@ export function hasActiveFilters(filters: MaterialFilters): boolean {
     Boolean(filters.questionTypeSlug) ||
     Boolean(filters.tagName) ||
     filters.favoriteOnly ||
-    filters.reviewOnly
+    filters.reviewOnly ||
+    filters.workbenchOnly
   );
 }
 

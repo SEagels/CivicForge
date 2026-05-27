@@ -30,6 +30,21 @@ describe("material filters", () => {
     expect(filterMaterials(materials, { ...DEFAULT_MATERIAL_FILTERS, reviewOnly: true })).toHaveLength(3);
   });
 
+  it("filters materials that still need workbench attention", () => {
+    const candidate = {
+      ...materials[0],
+      id: "source-candidate",
+      title: "资料：基层治理来源",
+      questionTypeSlugs: ["general"],
+      reviewEnabled: false,
+      status: "draft" as const,
+    };
+
+    expect(filterMaterials([...materials, candidate], { ...DEFAULT_MATERIAL_FILTERS, workbenchOnly: true })).toEqual([
+      candidate,
+    ]);
+  });
+
   it("sorts available tags by Chinese locale", () => {
     expect(getAvailableTags(materials)).toEqual([
       "产业振兴",
@@ -45,5 +60,6 @@ describe("material filters", () => {
     expect(hasActiveFilters(DEFAULT_MATERIAL_FILTERS)).toBe(false);
     expect(hasActiveFilters({ ...DEFAULT_MATERIAL_FILTERS, query: "治理" })).toBe(true);
     expect(hasActiveFilters({ ...DEFAULT_MATERIAL_FILTERS, favoriteOnly: true })).toBe(true);
+    expect(hasActiveFilters({ ...DEFAULT_MATERIAL_FILTERS, workbenchOnly: true })).toBe(true);
   });
 });

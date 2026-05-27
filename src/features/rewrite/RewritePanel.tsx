@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MaterialDraft } from "../materials/materialModel";
 import {
   REWRITE_TARGETS,
@@ -10,6 +10,7 @@ import {
 import {
   createManualTemplateProvider,
   filterRewriteLogs,
+  getRewriteDraftFromMaterial,
   getRewriteDraftFromLog,
   getRewriteMetrics,
   getRewritePromptCopyStatus,
@@ -20,11 +21,12 @@ import {
 interface RewritePanelProps {
   readonly materials: readonly MaterialDraft[];
   readonly logs: readonly RewriteLog[];
+  readonly focusedMaterialId?: string | null;
   readonly onSaveLog: (log: RewriteLog) => void;
   readonly onSaveAsMaterial: (log: RewriteLog) => void;
 }
 
-export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: RewritePanelProps) {
+export function RewritePanel({ materials, logs, focusedMaterialId, onSaveLog, onSaveAsMaterial }: RewritePanelProps) {
   const [sourceMaterialId, setSourceMaterialId] = useState("");
   const [targetId, setTargetId] = useState<RewriteTargetId>("compress");
   const [originalText, setOriginalText] = useState("");
@@ -48,7 +50,7 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
   );
   const canSave = originalText.trim().length > 0 && resultText.trim().length > 0;
 
-  const importMaterial = (materialId: string) => {
+  const importMaterial = useCallback((materialId: string) => {
     setSourceMaterialId(materialId);
     const material = materials.find((item) => item.id === materialId);
 
@@ -56,10 +58,19 @@ export function RewritePanel({ materials, logs, onSaveLog, onSaveAsMaterial }: R
       return;
     }
 
-    setOriginalText(material.contentMd || material.excerpt);
-    setResultText("");
+    const draft = getRewriteDraftFromMaterial(material);
+    setTargetId(draft.targetId);
+    setOriginalText(draft.originalText);
+    setResultText(draft.resultText);
+    setExtraInstruction(draft.extraInstruction);
     setLastSavedLog(null);
-  };
+  }, [materials]);
+
+  useEffect(() => {
+    if (focusedMaterialId) {
+      importMaterial(focusedMaterialId);
+    }
+  }, [focusedMaterialId, importMaterial]);
 
   const copyPrompt = async () => {
     try {

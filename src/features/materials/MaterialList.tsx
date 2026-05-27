@@ -2,12 +2,14 @@ import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialFilters } from "./materialFilters";
 import type { MaterialDraft } from "./materialModel";
+import { getMaterialWorkbenchStatus, type MaterialWorkbenchStage } from "./materialWorkbench";
 
 interface MaterialListProps {
   readonly materials: readonly MaterialDraft[];
   readonly selectedId: string | null;
   readonly filters: MaterialFilters;
   readonly totalCount: number;
+  readonly workbenchCount: number;
   readonly tags: readonly string[];
   readonly hasActiveFilters: boolean;
   readonly onSelect: (id: string) => void;
@@ -24,6 +26,7 @@ export function MaterialList({
   selectedId,
   filters,
   totalCount,
+  workbenchCount,
   tags,
   hasActiveFilters,
   onSelect,
@@ -127,6 +130,14 @@ export function MaterialList({
             />
             <span>待复习池</span>
           </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={filters.workbenchOnly}
+              onChange={(event) => onFiltersChange({ workbenchOnly: event.target.checked })}
+            />
+            <span>加工台 {workbenchCount}</span>
+          </label>
         </div>
 
         <div className="result-line">
@@ -148,22 +159,47 @@ export function MaterialList({
             <span>换个关键词，或清空筛选后再试。</span>
           </div>
         ) : (
-          materials.map((material) => (
-            <button
-              type="button"
-              key={material.id}
-              className={material.id === selectedId ? "material-card active" : "material-card"}
-              onClick={() => onSelect(material.id)}
-            >
-              <span className="material-title">{material.title}</span>
-              <span className="material-meta">
-                {topicNameBySlug.get(material.topicSlug)} / {typeNameBySlug.get(material.materialType)}
-              </span>
-              <span className="material-excerpt">{material.excerpt || material.contentMd || "空白素材"}</span>
-            </button>
-          ))
+          materials.map((material) => {
+            const workbenchStatus = getMaterialWorkbenchStatus(material);
+
+            return (
+              <button
+                type="button"
+                key={material.id}
+                className={material.id === selectedId ? "material-card active" : "material-card"}
+                onClick={() => onSelect(material.id)}
+              >
+                <span className="material-card-topline">
+                  <span className="material-title">{material.title}</span>
+                  <span className={`material-status-badge ${workbenchStatus.stage}`}>
+                    {getWorkbenchStageLabel(workbenchStatus.stage)}
+                  </span>
+                </span>
+                <span className="material-meta">
+                  {topicNameBySlug.get(material.topicSlug)} / {typeNameBySlug.get(material.materialType)}
+                </span>
+                <span className="material-excerpt">{material.excerpt || material.contentMd || "空白素材"}</span>
+              </button>
+            );
+          })
         )}
       </div>
     </section>
   );
+}
+
+function getWorkbenchStageLabel(stage: MaterialWorkbenchStage): string {
+  if (stage === "candidate") {
+    return "候选";
+  }
+
+  if (stage === "refining") {
+    return "待打磨";
+  }
+
+  if (stage === "ready") {
+    return "可复习";
+  }
+
+  return "已入库";
 }

@@ -41,6 +41,7 @@ import {
   type MaterialPatch,
 } from "./materialModel";
 import { formatMaterialSaveStatus, type MaterialSaveStatus } from "./materialSaveStatus";
+import { getWorkbenchCandidates } from "./materialWorkbench";
 
 type AppView = "dashboard" | "library" | "review" | "rewrite" | "graph" | "taxonomy" | "importExport" | "settings";
 
@@ -51,6 +52,7 @@ export function MaterialLibrary() {
   const [filters, setFilters] = useState<MaterialFilters>(DEFAULT_MATERIAL_FILTERS);
   const [view, setView] = useState<AppView>("dashboard");
   const [reviewFocusId, setReviewFocusId] = useState<string | null>(null);
+  const [rewriteFocusId, setRewriteFocusId] = useState<string | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>(STORAGE_MODE_PREVIEW);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [rewriteLogs, setRewriteLogs] = useState<readonly RewriteLog[]>([]);
@@ -61,6 +63,7 @@ export function MaterialLibrary() {
 
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
   const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
+  const workbenchCount = useMemo(() => getWorkbenchCandidates(activeMaterials).length, [activeMaterials]);
   const availableTags = useMemo(() => getAvailableTags(activeMaterials), [activeMaterials]);
   const linkableMaterials = useMemo(
     () => activeMaterials.map((material) => ({ id: material.id, title: material.title })),
@@ -183,11 +186,17 @@ export function MaterialLibrary() {
   const openView = useCallback((nextView: AppView) => {
     setView(nextView);
     setReviewFocusId(null);
+    if (nextView !== "rewrite") {
+      setRewriteFocusId(null);
+    }
   }, []);
 
   const openLibrary = useCallback(() => openView("library"), [openView]);
   const openReview = useCallback(() => openView("review"), [openView]);
-  const openRewrite = useCallback(() => openView("rewrite"), [openView]);
+  const openRewrite = useCallback(() => {
+    setRewriteFocusId(null);
+    openView("rewrite");
+  }, [openView]);
   const openImportExport = useCallback(() => openView("importExport"), [openView]);
 
   const openMaterialFromGraph = useCallback((materialId: string) => {
@@ -202,6 +211,16 @@ export function MaterialLibrary() {
     setView("review");
   }, [state.selectedId]);
 
+  const startSelectedRewrite = useCallback(() => {
+    if (!state.selectedId) {
+      return;
+    }
+
+    setRewriteFocusId(state.selectedId);
+    setReviewFocusId(null);
+    setView("rewrite");
+  }, [state.selectedId]);
+
   const rateMaterial = useCallback((materialId: string, rating: ReviewRating) => {
     setReviewFocusId(null);
     setState((current) => reviewMaterial(current, materialId, rating));
@@ -214,6 +233,7 @@ export function MaterialLibrary() {
   const saveRewriteAsMaterial = useCallback((log: RewriteLog) => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
+    setRewriteFocusId(null);
     setState((current) => createMaterialFromRewrite(current, buildMaterialInputFromRewrite(log)));
     setView("library");
   }, []);
@@ -306,6 +326,7 @@ export function MaterialLibrary() {
             selectedId={state.selectedId}
             filters={filters}
             totalCount={activeMaterials.length}
+            workbenchCount={workbenchCount}
             tags={availableTags}
             hasActiveFilters={filtersActive}
             onSelect={(id) => setState((current) => selectMaterial(current, id))}
@@ -350,6 +371,7 @@ export function MaterialLibrary() {
             onChange={updateSelected}
             onArchive={() => setState((current) => archiveSelectedMaterial(current))}
             onStartReview={startSelectedReview}
+            onStartRewrite={startSelectedRewrite}
             onResetExamples={resetExampleMaterials}
           />
         </>
@@ -364,6 +386,7 @@ export function MaterialLibrary() {
         <RewritePanel
           materials={activeMaterials}
           logs={rewriteLogs}
+          focusedMaterialId={rewriteFocusId}
           onSaveLog={saveRewriteLog}
           onSaveAsMaterial={saveRewriteAsMaterial}
         />
