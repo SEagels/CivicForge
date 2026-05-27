@@ -1566,23 +1566,37 @@ button:disabled {
   opacity: 0.24;
 }
 
-.graph-node-dot {
+.graph-node-hitbox {
   cursor: grab;
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 0;
+}
+
+.graph-node-hitbox:active {
+  cursor: grabbing;
+}
+
+.graph-node-hitbox:focus {
+  outline: none;
+}
+
+.graph-node-hitbox:focus + .graph-node-dot {
+  stroke: #2f6f63;
+}
+
+.graph-node-hitbox:hover + .graph-node-dot {
+  transform: scale(1.08);
+}
+
+.graph-node-dot {
+  pointer-events: none;
   stroke: #ffffff;
   stroke-width: 2.5;
   transition:
     fill 150ms ease,
     stroke 150ms ease,
     transform 150ms ease;
-}
-
-.graph-node-dot:active {
-  cursor: grabbing;
-}
-
-.graph-node-dot:focus {
-  outline: none;
-  stroke: #2f6f63;
 }
 
 .graph-node-dot.material {
@@ -3096,11 +3110,11 @@ nav button.active {
     transform var(--motion-fast) var(--ease-standard);
 }
 
-.graph-node-dot:hover {
+.graph-node-hitbox:hover + .graph-node-dot {
   transform: scale(1.04);
 }
 
-.graph-node-dot:focus {
+.graph-node-hitbox:focus + .graph-node-dot {
   stroke: var(--accent-strong);
 }
 

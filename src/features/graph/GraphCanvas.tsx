@@ -1,6 +1,12 @@
-import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type SimulationNodeDatum } from "d3-force";
 import { useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
-import type { KnowledgeGraph, KnowledgeGraphEdge, KnowledgeGraphNode } from "./graphModel";
+import {
+  buildGraphLayout,
+  getNodeHitRadius,
+  getNodeRadius,
+  GRAPH_LAYOUT_CONFIG,
+  type PositionedGraphEdge,
+} from "./graphLayout";
+import type { KnowledgeGraph, KnowledgeGraphEdge } from "./graphModel";
 import { applyGraphPan, applyGraphZoom, type GraphViewport } from "./graphViewport";
 
 interface GraphCanvasProps {
@@ -12,15 +18,6 @@ interface GraphCanvasProps {
   readonly onHoverNode: (nodeId: string | null) => void;
   readonly onViewportChange: (viewport: GraphViewport) => void;
 }
-
-interface PositionedNode extends KnowledgeGraphNode, SimulationNodeDatum {
-  readonly id: string;
-  x: number;
-  y: number;
-}
-
-const CANVAS_WIDTH = 620;
-const CANVAS_HEIGHT = 620;
 
 export function GraphCanvas({
   graph,
@@ -37,7 +34,7 @@ export function GraphCanvas({
     null,
   );
   const [manualPositions, setManualPositions] = useState<Record<string, { readonly x: number; readonly y: number }>>({});
-  const layout = useMemo(() => buildLayout(graph, manualPositions), [graph, manualPositions]);
+  const layout = useMemo(() => buildGraphLayout(graph, manualPositions), [graph, manualPositions]);
   const activeNodeId = hoveredNodeId ?? selectedNodeId;
   const neighborIds = useMemo(() => getNeighborIds(graph.edges, activeNodeId), [activeNodeId, graph.edges]);
 
@@ -121,7 +118,7 @@ export function GraphCanvas({
       className={panStart ? "graph-canvas panning" : "graph-canvas"}
       role="img"
       aria-label="CivicForge knowledge graph"
-      viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
+      viewBox={`0 0 ${GRAPH_LAYOUT_CONFIG.width} ${GRAPH_LAYOUT_CONFIG.height}`}
       onWheel={zoomCanvas}
       onPointerDown={startPan}
       onPointerMove={movePan}
@@ -155,8 +152,8 @@ export function GraphCanvas({
                 onPointerLeave={() => onHoverNode(null)}
               >
                 <circle
-                  className={`graph-node-dot ${node.kind}`}
-                  r={getNodeRadius(node.kind)}
+                  className={`graph-node-hitbox ${node.kind}`}
+                  r={getNodeHitRadius(node.kind)}
                   tabIndex={0}
                   onClick={() => onSelectNode(node.id)}
                   onPointerDown={(event) => startDrag(event, node.id)}
@@ -166,6 +163,7 @@ export function GraphCanvas({
                 >
                   <title>{node.label}</title>
                 </circle>
+                <circle className={`graph-node-dot ${node.kind}`} r={getNodeRadius(node.kind)} aria-hidden="true" />
                 {showLabel ? (
                   <text className="graph-node-label" x={getNodeRadius(node.kind) + 7} y="4">
                     {node.label}
@@ -178,61 +176,6 @@ export function GraphCanvas({
       </g>
     </svg>
   );
-}
-
-function buildLayout(graph: KnowledgeGraph, manualPositions: Record<string, { readonly x: number; readonly y: number }>) {
-  const nodes: PositionedNode[] = graph.nodes.map((node, index) => {
-    const angle = (index / Math.max(graph.nodes.length, 1)) * Math.PI * 2;
-    const radius = 184 + (index % 4) * 24;
-    const manual = manualPositions[node.id];
-
-    return {
-      ...node,
-      x: manual?.x ?? CANVAS_WIDTH / 2 + Math.cos(angle) * radius,
-      y: manual?.y ?? CANVAS_HEIGHT / 2 + Math.sin(angle) * radius,
-      fx: manual?.x,
-      fy: manual?.y,
-    };
-  });
-  const links = graph.edges.map((edge) => ({ ...edge }));
-
-  forceSimulation(nodes)
-    .force(
-      "link",
-      forceLink<PositionedNode, KnowledgeGraphEdge & { source: string | PositionedNode; target: string | PositionedNode }>(
-        links,
-      )
-        .id((node) => node.id)
-        .distance((edge) => (edge.kind === "material-link" ? 122 : 96))
-        .strength(0.55),
-    )
-    .force("charge", forceManyBody().strength(-260))
-    .force("collide", forceCollide<PositionedNode>().radius((node) => getNodeRadius(node.kind) + 18))
-    .force("center", forceCenter(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2))
-    .stop()
-    .tick(160);
-
-  for (const node of nodes) {
-    node.x = Math.max(36, Math.min(CANVAS_WIDTH - 130, node.x));
-    node.y = Math.max(36, Math.min(CANVAS_HEIGHT - 36, node.y));
-  }
-
-  return {
-    nodes,
-    edges: links.map((edge) => ({
-      ...edge,
-      source: resolveNode(edge.source, nodes),
-      target: resolveNode(edge.target, nodes),
-    })),
-  };
-}
-
-function resolveNode(value: string | PositionedNode, nodes: readonly PositionedNode[]): PositionedNode {
-  if (typeof value !== "string") {
-    return value;
-  }
-
-  return nodes.find((node) => node.id === value) ?? nodes[0];
 }
 
 function getNeighborIds(edges: readonly KnowledgeGraphEdge[], activeNodeId: string | null): Set<string> {
@@ -255,21 +198,9 @@ function getNeighborIds(edges: readonly KnowledgeGraphEdge[], activeNodeId: stri
   return ids;
 }
 
-function getEdgeClassName(edge: { readonly source: PositionedNode; readonly target: PositionedNode; readonly kind: string }, activeNodeId: string | null): string {
+function getEdgeClassName(edge: PositionedGraphEdge, activeNodeId: string | null): string {
   const active = activeNodeId && (edge.source.id === activeNodeId || edge.target.id === activeNodeId);
   return active ? `graph-link ${edge.kind} active` : `graph-link ${edge.kind}`;
-}
-
-function getNodeRadius(kind: KnowledgeGraphNode["kind"]): number {
-  if (kind === "material") {
-    return 13;
-  }
-
-  if (kind === "topic") {
-    return 11;
-  }
-
-  return 8;
 }
 
 function getGraphPoint(
@@ -284,8 +215,8 @@ function getGraphPoint(
   }
 
   return {
-    x: Math.max(24, Math.min(CANVAS_WIDTH - 24, (point.x - viewport.x) / viewport.scale)),
-    y: Math.max(24, Math.min(CANVAS_HEIGHT - 24, (point.y - viewport.y) / viewport.scale)),
+    x: Math.max(24, Math.min(GRAPH_LAYOUT_CONFIG.width - 24, (point.x - viewport.x) / viewport.scale)),
+    y: Math.max(24, Math.min(GRAPH_LAYOUT_CONFIG.height - 24, (point.y - viewport.y) / viewport.scale)),
   };
 }
 
