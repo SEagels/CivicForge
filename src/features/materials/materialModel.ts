@@ -44,6 +44,17 @@ export type MaterialPatch = Partial<
   >
 >;
 
+export interface MaterialCreationInput {
+  readonly title: string;
+  readonly contentMd: string;
+  readonly excerpt: string;
+  readonly materialType: MaterialTypeId;
+  readonly topicSlug?: string;
+  readonly tagNames: readonly string[];
+  readonly questionTypeSlugs?: readonly string[];
+  readonly source: string;
+}
+
 const nowIso = () => new Date().toISOString();
 
 export function createInitialMaterialState(): MaterialState {
@@ -150,16 +161,21 @@ export function createMaterialFromSource(state: MaterialState, input: RewriteMat
   return createMaterialFromInput(state, input, id);
 }
 
-function createMaterialFromInput(state: MaterialState, input: RewriteMaterialInput, id: string): MaterialState {
+export function createMaterialFromAnswerDraft(state: MaterialState, input: MaterialCreationInput): MaterialState {
+  const id = `mat-answer-${Date.now().toString(36)}`;
+  return createMaterialFromInput(state, input, id);
+}
+
+function createMaterialFromInput(state: MaterialState, input: MaterialCreationInput, id: string): MaterialState {
   const material: MaterialDraft = {
     id,
     title: input.title,
     contentMd: input.contentMd,
     excerpt: input.excerpt,
     materialType: input.materialType,
-    topicSlug: "grassroots-governance",
+    topicSlug: input.topicSlug ?? "grassroots-governance",
     tagNames: input.tagNames,
-    questionTypeSlugs: ["general"],
+    questionTypeSlugs: input.questionTypeSlugs ?? ["general"],
     source: input.source,
     status: "draft",
     favorite: false,

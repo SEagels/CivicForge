@@ -37,4 +37,13 @@ describe("responsive desktop layout CSS", () => {
     expect(css).toMatch(/\.library-quick-filters\s*\{[\s\S]*flex-wrap:\s*wrap/s);
     expect(css).toMatch(/\.editor-toolbar\s*\{[\s\S]*flex-wrap:\s*wrap/s);
   });
+
+  it("defines responsive styles for the answer call workbench", () => {
+    expect(css).toContain(".answer-workbench");
+    expect(css).toContain(".answer-controls");
+    expect(css).toContain(".callable-groups");
+    expect(css).toContain(".answer-draft-card");
+    expect(css).toMatch(/\.answer-controls\s*\{[\s\S]*grid-template-columns:\s*repeat\(4, minmax\(160px, 1fr\)\)/s);
+    expect(css).toMatch(/@media \(max-width: 980px\)[\s\S]*\.answer-layout\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
+  });
 });

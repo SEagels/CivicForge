@@ -3,6 +3,7 @@ import {
   archiveSelectedMaterial,
   createInitialMaterialState,
   createMaterial,
+  createMaterialFromAnswerDraft,
   confirmSelectedMaterial,
   createMaterialFromSource,
   createMaterialFromRewrite,
@@ -190,6 +191,32 @@ describe("material model", () => {
       status: "draft",
       reviewEnabled: false,
       questionTypeSlugs: ["general"],
+    });
+  });
+
+  it("creates and selects a material from answer workbench draft", () => {
+    const state = createInitialMaterialState();
+    const next = createMaterialFromAnswerDraft(state, {
+      title: "调用练习：基层治理 + 提出对策 + 2026-05-27",
+      contentMd: "## 对策\n推动治理资源下沉基层。",
+      excerpt: "推动治理资源下沉基层。",
+      materialType: "solution",
+      topicSlug: "grassroots-governance",
+      questionTypeSlugs: ["countermeasure"],
+      source: "调用工作台",
+      tagNames: ["调用工作台", "基层治理", "提出对策"],
+    });
+    const selected = next.materials.find((material) => material.id === next.selectedId);
+
+    expect(selected).toMatchObject({
+      title: "调用练习：基层治理 + 提出对策 + 2026-05-27",
+      materialType: "solution",
+      topicSlug: "grassroots-governance",
+      questionTypeSlugs: ["countermeasure"],
+      source: "调用工作台",
+      tagNames: ["调用工作台", "基层治理", "提出对策"],
+      status: "draft",
+      reviewEnabled: false,
     });
   });
 });

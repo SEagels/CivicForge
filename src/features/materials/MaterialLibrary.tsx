@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ReviewRating } from "../../domain/enums";
+import { AnswerWorkbenchPanel } from "../answer/AnswerWorkbenchPanel";
+import type { AnswerMaterialInput } from "../answer/answerWorkbench";
 import { createAppDataService, type AppDataService, type StorageMode } from "../appData/appDataService";
 import { DashboardPanel } from "../dashboard/DashboardPanel";
 import { MarkdownEditor } from "../editor/MarkdownEditor";
@@ -32,6 +34,7 @@ import {
   confirmSelectedMaterial,
   createInitialMaterialState,
   createMaterial,
+  createMaterialFromAnswerDraft,
   createMaterialFromSource,
   createMaterialFromRewrite,
   getActiveMaterials,
@@ -45,7 +48,16 @@ import { formatMaterialSaveStatus, type MaterialSaveStatus } from "./materialSav
 import { getMaterialDuplicateHints } from "./materialQuality";
 import { getWorkbenchCandidates, getWorkbenchStats } from "./materialWorkbench";
 
-type AppView = "dashboard" | "library" | "review" | "rewrite" | "graph" | "taxonomy" | "importExport" | "settings";
+type AppView =
+  | "dashboard"
+  | "library"
+  | "answer"
+  | "review"
+  | "rewrite"
+  | "graph"
+  | "taxonomy"
+  | "importExport"
+  | "settings";
 
 const STORAGE_MODE_PREVIEW = "Preview localStorage";
 
@@ -199,6 +211,7 @@ export function MaterialLibrary() {
   }, []);
 
   const openLibrary = useCallback(() => openView("library"), [openView]);
+  const openAnswer = useCallback(() => openView("answer"), [openView]);
   const openReview = useCallback(() => openView("review"), [openView]);
   const openRewrite = useCallback(() => {
     setRewriteFocusId(null);
@@ -264,6 +277,14 @@ export function MaterialLibrary() {
     setView("library");
   }, []);
 
+  const saveAnswerDraftAsMaterial = useCallback((input: AnswerMaterialInput) => {
+    setFilters(DEFAULT_MATERIAL_FILTERS);
+    setReviewFocusId(null);
+    setRewriteFocusId(null);
+    setState((current) => createMaterialFromAnswerDraft(current, input));
+    setView("library");
+  }, []);
+
   const downloadArchive = useCallback(() => {
     void saveArchiveFile(archiveJson, createArchiveFilename()).catch((error) => {
       console.warn("Unable to export CivicForge archive.", error);
@@ -306,6 +327,9 @@ export function MaterialLibrary() {
           </NavButton>
           <NavButton active={view === "library"} onClick={openLibrary}>
             素材库
+          </NavButton>
+          <NavButton active={view === "answer"} onClick={openAnswer}>
+            调用工作台
           </NavButton>
           <NavButton active={view === "review"} onClick={openReview}>
             复习
@@ -397,6 +421,8 @@ export function MaterialLibrary() {
             onResetExamples={resetExampleMaterials}
           />
         </>
+      ) : view === "answer" ? (
+        <AnswerWorkbenchPanel materials={activeMaterials} onSaveDraftAsMaterial={saveAnswerDraftAsMaterial} />
       ) : view === "review" ? (
         <ReviewPanel
           materials={activeMaterials}
