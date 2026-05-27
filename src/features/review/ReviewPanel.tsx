@@ -1,5 +1,5 @@
 import type { ReviewRating } from "../../domain/enums";
-import { BUILTIN_MATERIAL_TYPES } from "../../domain/seeds";
+import { BUILTIN_MATERIAL_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialDraft } from "../materials/materialModel";
 import { getDueReviewMaterials, getTodayReviewCount } from "./reviewScheduler";
 
@@ -8,6 +8,7 @@ interface ReviewPanelProps {
   readonly focusedMaterialId: string | null;
   readonly onRate: (materialId: string, rating: ReviewRating) => void;
   readonly onBackToLibrary: () => void;
+  readonly onEditMaterial: (materialId: string) => void;
 }
 
 const RATING_ACTIONS: readonly {
@@ -24,8 +25,15 @@ const RATING_ACTIONS: readonly {
 const materialTypeNameBySlug: ReadonlyMap<string, string> = new Map(
   BUILTIN_MATERIAL_TYPES.map((type) => [type.slug, type.name]),
 );
+const topicNameBySlug: ReadonlyMap<string, string> = new Map(BUILTIN_TOPICS.map((topic) => [topic.slug, topic.name]));
 
-export function ReviewPanel({ materials, focusedMaterialId, onRate, onBackToLibrary }: ReviewPanelProps) {
+export function ReviewPanel({
+  materials,
+  focusedMaterialId,
+  onRate,
+  onBackToLibrary,
+  onEditMaterial,
+}: ReviewPanelProps) {
   const now = new Date();
   const dueMaterials = getDueReviewMaterials(materials, now);
   const focusedMaterial = focusedMaterialId ? materials.find((material) => material.id === focusedMaterialId) : null;
@@ -66,6 +74,11 @@ export function ReviewPanel({ materials, focusedMaterialId, onRate, onBackToLibr
             <span className="due-chip">{formatDueText(current.nextReviewAt)}</span>
           </div>
 
+          <div className="review-source-line">
+            <span>{topicNameBySlug.get(current.topicSlug) ?? current.topicSlug}</span>
+            <span>{current.source || "未标来源"}</span>
+          </div>
+
           <div className="review-content">{current.contentMd || current.excerpt || "空白素材"}</div>
 
           <div className="review-meta">
@@ -86,6 +99,12 @@ export function ReviewPanel({ materials, focusedMaterialId, onRate, onBackToLibr
                 <span>{action.detail}</span>
               </button>
             ))}
+          </div>
+
+          <div className="review-card-actions">
+            <button type="button" className="ghost-button" onClick={() => onEditMaterial(current.id)}>
+              返回编辑当前素材
+            </button>
           </div>
         </article>
       ) : (

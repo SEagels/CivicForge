@@ -1,7 +1,9 @@
 import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialDraft } from "./materialModel";
-import { isWorkbenchCandidate } from "./materialWorkbench";
+import { getMaterialWorkbenchStatus, isWorkbenchCandidate } from "./materialWorkbench";
+
+export type MaterialWorkbenchFilterStep = "all" | "candidate" | "classify" | "intake" | "review";
 
 export interface MaterialFilters {
   readonly query: string;
@@ -12,6 +14,7 @@ export interface MaterialFilters {
   readonly favoriteOnly: boolean;
   readonly reviewOnly: boolean;
   readonly workbenchOnly: boolean;
+  readonly workbenchStep: MaterialWorkbenchFilterStep;
 }
 
 export const DEFAULT_MATERIAL_FILTERS: MaterialFilters = {
@@ -23,6 +26,7 @@ export const DEFAULT_MATERIAL_FILTERS: MaterialFilters = {
   favoriteOnly: false,
   reviewOnly: false,
   workbenchOnly: false,
+  workbenchStep: "all",
 };
 
 const topicNameBySlug: ReadonlyMap<string, string> = new Map(BUILTIN_TOPICS.map((topic) => [topic.slug, topic.name]));
@@ -68,6 +72,10 @@ export function filterMaterials(
       return false;
     }
 
+    if (filters.workbenchStep !== "all" && !matchesWorkbenchStep(material, filters.workbenchStep)) {
+      return false;
+    }
+
     if (!query) {
       return true;
     }
@@ -91,8 +99,31 @@ export function hasActiveFilters(filters: MaterialFilters): boolean {
     Boolean(filters.tagName) ||
     filters.favoriteOnly ||
     filters.reviewOnly ||
-    filters.workbenchOnly
+    filters.workbenchOnly ||
+    filters.workbenchStep !== "all"
   );
+}
+
+function matchesWorkbenchStep(material: MaterialDraft, step: MaterialWorkbenchFilterStep): boolean {
+  const status = getMaterialWorkbenchStatus(material);
+
+  if (step === "candidate") {
+    return status.stage === "candidate";
+  }
+
+  if (step === "classify") {
+    return status.primaryStep === "classify";
+  }
+
+  if (step === "intake") {
+    return status.primaryStep === "intake";
+  }
+
+  if (step === "review") {
+    return status.primaryStep === "review";
+  }
+
+  return true;
 }
 
 function buildSearchText(material: MaterialDraft): string {

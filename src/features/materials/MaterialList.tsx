@@ -1,6 +1,6 @@
 import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
-import type { MaterialFilters } from "./materialFilters";
+import type { MaterialFilters, MaterialWorkbenchFilterStep } from "./materialFilters";
 import type { MaterialDraft } from "./materialModel";
 import {
   getMaterialWorkbenchStatus,
@@ -23,6 +23,32 @@ interface MaterialListProps {
   readonly onClearFilters: () => void;
 }
 
+type QuickFilterId = "all" | "workbench" | "review" | "favorite";
+
+const QUICK_FILTERS: readonly {
+  readonly id: QuickFilterId;
+  readonly label: string;
+}[] = [
+  { id: "all", label: "全部" },
+  { id: "workbench", label: "加工台" },
+  { id: "review", label: "复习池" },
+  { id: "favorite", label: "收藏" },
+];
+
+const WORKBENCH_STEPS: readonly {
+  readonly id: Exclude<MaterialWorkbenchFilterStep, "all">;
+  readonly label: string;
+  readonly countKey: keyof Pick<
+    MaterialWorkbenchStats,
+    "candidateCount" | "classifyCount" | "intakeReadyCount" | "reviewReadyCount"
+  >;
+}[] = [
+  { id: "candidate", label: "候选", countKey: "candidateCount" },
+  { id: "classify", label: "待分类", countKey: "classifyCount" },
+  { id: "intake", label: "待入库", countKey: "intakeReadyCount" },
+  { id: "review", label: "待复习", countKey: "reviewReadyCount" },
+];
+
 const typeNameBySlug: ReadonlyMap<string, string> = new Map(BUILTIN_MATERIAL_TYPES.map((type) => [type.slug, type.name]));
 const topicNameBySlug: ReadonlyMap<string, string> = new Map(BUILTIN_TOPICS.map((topic) => [topic.slug, topic.name]));
 
@@ -40,6 +66,8 @@ export function MaterialList({
   onFiltersChange,
   onClearFilters,
 }: MaterialListProps) {
+  const activeQuickFilter = getActiveQuickFilter(filters);
+
   return (
     <section className="material-list" aria-label="素材列表">
       <div className="pane-header">
@@ -63,6 +91,20 @@ export function MaterialList({
       </div>
 
       <div className="filter-panel" aria-label="筛选条件">
+        <div className="library-quick-filters" aria-label="素材快速筛选">
+          {QUICK_FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={activeQuickFilter === item.id ? "active" : ""}
+              onClick={() => onFiltersChange(getQuickFilterPatch(item.id))}
+            >
+              {item.label}
+              {item.id === "workbench" ? <strong>{workbenchCount}</strong> : null}
+            </button>
+          ))}
+        </div>
+
         <div className="filter-grid">
           <label>
             <span>主题</span>
@@ -119,33 +161,6 @@ export function MaterialList({
           </label>
         </div>
 
-        <div className="filter-toggles">
-          <label>
-            <input
-              type="checkbox"
-              checked={filters.favoriteOnly}
-              onChange={(event) => onFiltersChange({ favoriteOnly: event.target.checked })}
-            />
-            <span>收藏</span>
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={filters.reviewOnly}
-              onChange={(event) => onFiltersChange({ reviewOnly: event.target.checked })}
-            />
-            <span>待复习池</span>
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={filters.workbenchOnly}
-              onChange={(event) => onFiltersChange({ workbenchOnly: event.target.checked })}
-            />
-            <span>加工台 {workbenchCount}</span>
-          </label>
-        </div>
-
         <div className="result-line">
           <span>
             {materials.length} / {totalCount} 条
@@ -156,11 +171,26 @@ export function MaterialList({
             </button>
           ) : null}
         </div>
-        <div className="workbench-mini-stats" aria-label="加工台统计">
-          <span>候选 {workbenchStats.candidateCount}</span>
-          <span>待分类 {workbenchStats.classifyCount}</span>
-          <span>待入库 {workbenchStats.intakeReadyCount}</span>
-          <span>待复习 {workbenchStats.reviewReadyCount}</span>
+
+        <div className="workbench-mini-stats" aria-label="加工台分步筛选">
+          {WORKBENCH_STEPS.map((step) => (
+            <button
+              key={step.id}
+              type="button"
+              className={filters.workbenchStep === step.id ? "workbench-step-chip active" : "workbench-step-chip"}
+              onClick={() =>
+                onFiltersChange({
+                  favoriteOnly: false,
+                  reviewOnly: false,
+                  workbenchOnly: true,
+                  workbenchStep: filters.workbenchStep === step.id ? "all" : step.id,
+                })
+              }
+            >
+              <span>{step.label}</span>
+              <strong>{workbenchStats[step.countKey]}</strong>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -191,6 +221,10 @@ export function MaterialList({
                   {topicNameBySlug.get(material.topicSlug)} / {typeNameBySlug.get(material.materialType)}
                 </span>
                 <span className="material-excerpt">{material.excerpt || material.contentMd || "空白素材"}</span>
+                <span className="material-card-footer">
+                  <span>{material.source || "未标来源"}</span>
+                  <strong>{workbenchStatus.actionLabel}</strong>
+                </span>
               </button>
             );
           })
@@ -198,6 +232,58 @@ export function MaterialList({
       </div>
     </section>
   );
+}
+
+function getActiveQuickFilter(filters: MaterialFilters): QuickFilterId {
+  if (filters.workbenchOnly || filters.workbenchStep !== "all") {
+    return "workbench";
+  }
+
+  if (filters.reviewOnly) {
+    return "review";
+  }
+
+  if (filters.favoriteOnly) {
+    return "favorite";
+  }
+
+  return "all";
+}
+
+function getQuickFilterPatch(id: QuickFilterId): Partial<MaterialFilters> {
+  if (id === "workbench") {
+    return {
+      favoriteOnly: false,
+      reviewOnly: false,
+      workbenchOnly: true,
+      workbenchStep: "all",
+    };
+  }
+
+  if (id === "review") {
+    return {
+      favoriteOnly: false,
+      reviewOnly: true,
+      workbenchOnly: false,
+      workbenchStep: "all",
+    };
+  }
+
+  if (id === "favorite") {
+    return {
+      favoriteOnly: true,
+      reviewOnly: false,
+      workbenchOnly: false,
+      workbenchStep: "all",
+    };
+  }
+
+  return {
+    favoriteOnly: false,
+    reviewOnly: false,
+    workbenchOnly: false,
+    workbenchStep: "all",
+  };
 }
 
 function getWorkbenchStageLabel(status: MaterialWorkbenchStatus): string {

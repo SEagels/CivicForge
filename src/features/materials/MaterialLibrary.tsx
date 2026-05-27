@@ -213,6 +213,14 @@ export function MaterialLibrary() {
     setView("library");
   }, []);
 
+  const openMaterialInLibrary = useCallback((materialId: string) => {
+    setFilters(DEFAULT_MATERIAL_FILTERS);
+    setReviewFocusId(null);
+    setRewriteFocusId(null);
+    setState((current) => selectMaterial(current, materialId));
+    setView("library");
+  }, []);
+
   const startSelectedReview = useCallback(() => {
     setReviewFocusId(state.selectedId);
     setView("review");
@@ -395,6 +403,7 @@ export function MaterialLibrary() {
           focusedMaterialId={reviewFocusId}
           onRate={rateMaterial}
           onBackToLibrary={openLibrary}
+          onEditMaterial={openMaterialInLibrary}
         />
       ) : view === "rewrite" ? (
         <RewritePanel

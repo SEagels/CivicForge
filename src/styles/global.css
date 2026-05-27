@@ -3669,6 +3669,172 @@ nav button.active {
   margin: 0;
 }
 
+.library-quick-filters {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.library-quick-filters button {
+  align-items: center;
+  background: var(--surface-control);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  display: inline-flex;
+  gap: 6px;
+  min-height: 32px;
+  min-width: 0;
+  padding: 0 11px;
+}
+
+.library-quick-filters button:hover,
+.library-quick-filters button.active {
+  background: var(--surface-selected);
+  border-color: var(--accent-line);
+  color: var(--accent-strong);
+}
+
+.library-quick-filters strong {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.editor-toolbar {
+  flex-wrap: wrap;
+}
+
+.material-card-footer {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.material-card-footer span,
+.material-card-footer strong {
+  font-size: 11px;
+  line-height: 1.3;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.material-card-footer span {
+  color: var(--text-secondary);
+}
+
+.material-card-footer strong {
+  color: var(--accent-strong);
+}
+
+.workbench-step-chip {
+  align-items: center;
+  background: var(--surface-control);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  min-height: 30px;
+  min-width: 0;
+  padding: 0 9px;
+}
+
+.workbench-step-chip span,
+.workbench-step-chip strong {
+  font-size: 11px;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-step-chip:hover,
+.workbench-step-chip.active {
+  background: var(--surface-selected);
+  border-color: var(--accent-line);
+  color: var(--accent-strong);
+}
+
+.next-action-panel {
+  background: var(--surface-glass-strong);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 13px;
+}
+
+.next-action-panel > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.next-action-panel span,
+.next-action-panel small,
+.next-action-panel li,
+.next-action-panel p {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.next-action-panel strong {
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.next-action-panel ul {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.next-action-panel p {
+  margin: 0;
+}
+
+.duplicate-expand-button {
+  justify-self: start;
+}
+
+.review-source-line,
+.review-card-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-source-line span {
+  background: var(--surface-control);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 9px;
+}
+
+.review-card-actions {
+  border-top: 1px solid var(--line-soft);
+  justify-content: flex-end;
+  padding-top: 14px;
+}
+
 :root[data-theme="dark"] .material-status-badge.candidate {
   background: rgba(239, 180, 170, 0.12);
   border-color: rgba(239, 180, 170, 0.24);

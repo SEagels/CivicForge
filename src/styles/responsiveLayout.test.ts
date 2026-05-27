@@ -28,4 +28,13 @@ describe("responsive desktop layout CSS", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*animation-duration:\s*0\.01ms/s);
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*transition-duration:\s*0\.01ms/s);
   });
+
+  it("defines compact controls for the high-frequency material workflow", () => {
+    expect(css).toContain(".library-quick-filters");
+    expect(css).toContain(".workbench-step-chip");
+    expect(css).toContain(".next-action-panel");
+    expect(css).toContain(".review-card-actions");
+    expect(css).toMatch(/\.library-quick-filters\s*\{[\s\S]*flex-wrap:\s*wrap/s);
+    expect(css).toMatch(/\.editor-toolbar\s*\{[\s\S]*flex-wrap:\s*wrap/s);
+  });
 });

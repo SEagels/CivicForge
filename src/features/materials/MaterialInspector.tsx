@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialDraft, MaterialPatch } from "./materialModel";
@@ -29,6 +30,8 @@ export function MaterialInspector({
   onStartRewrite,
   onResetExamples,
 }: MaterialInspectorProps) {
+  const [duplicatesExpanded, setDuplicatesExpanded] = useState(false);
+
   if (!material) {
     return (
       <aside className="inspector" aria-label="属性面板">
@@ -46,6 +49,7 @@ export function MaterialInspector({
   const workbenchStatus = getMaterialWorkbenchStatus(material);
   const qualityLabel = getQualityLevelLabel(qualityReport.level);
   const failedQualityLabels = qualityReport.checks.filter((check) => !check.passed).map((check) => check.label);
+  const visibleDuplicateHints = duplicatesExpanded ? duplicateHints : duplicateHints.slice(0, 3);
 
   return (
     <aside className="inspector" aria-label="属性面板">
@@ -58,6 +62,44 @@ export function MaterialInspector({
           归档
         </button>
       </div>
+
+      <section className={`next-action-panel ${workbenchStatus.stage}`} aria-label="下一步动作">
+        <div>
+          <span>下一步</span>
+          <strong>{workbenchStatus.actionLabel}</strong>
+          <small>{getWorkbenchStepLabel(workbenchStatus.primaryStep)}</small>
+        </div>
+        {workbenchStatus.failedCheckLabels.length > 0 ? (
+          <ul>
+            {workbenchStatus.failedCheckLabels.map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>{getNextActionDescription(workbenchStatus.primaryStep)}</p>
+        )}
+        <div className="workbench-actions">
+          {workbenchStatus.primaryStep === "intake" ? (
+            <button type="button" className="primary-button" onClick={onConfirm}>
+              确认入库
+            </button>
+          ) : null}
+          {workbenchStatus.primaryStep === "review" ? (
+            <button type="button" className="primary-button" onClick={() => onChange({ reviewEnabled: true })}>
+              加入复习
+            </button>
+          ) : null}
+          {workbenchStatus.primaryStep !== "done" ? (
+            <button type="button" className="ghost-button" onClick={onStartRewrite}>
+              去 Rewrite 打磨
+            </button>
+          ) : (
+            <button type="button" className="ghost-button" onClick={onStartReview}>
+              开始复习
+            </button>
+          )}
+        </div>
+      </section>
 
       <label className="favorite-row">
         <input
@@ -144,44 +186,8 @@ export function MaterialInspector({
             ))}
           </ul>
         ) : (
-          <p>已达到复习入库标准</p>
+          <p>已达到复习入库标准。</p>
         )}
-      </section>
-
-      <section className={`workbench-panel ${workbenchStatus.stage}`} aria-label="素材加工台">
-        <div className="workbench-panel-header">
-          <div>
-            <span>加工台</span>
-            <strong>{getWorkbenchStepLabel(workbenchStatus.primaryStep)}</strong>
-          </div>
-          <small>{workbenchStatus.actionLabel}</small>
-        </div>
-        {workbenchStatus.failedCheckLabels.length > 0 ? (
-          <ul>
-            {workbenchStatus.failedCheckLabels.map((label) => (
-              <li key={label}>{label}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>这条素材已经满足质量门槛，可以进入复习。</p>
-        )}
-        <div className="workbench-actions">
-          {workbenchStatus.primaryStep === "intake" ? (
-            <button type="button" className="primary-button" onClick={onConfirm}>
-              确认入库
-            </button>
-          ) : null}
-          {workbenchStatus.primaryStep === "review" ? (
-            <button type="button" className="primary-button" onClick={() => onChange({ reviewEnabled: true })}>
-              加入复习
-            </button>
-          ) : null}
-          {workbenchStatus.primaryStep !== "done" ? (
-            <button type="button" className="ghost-button" onClick={onStartRewrite}>
-              去 Rewrite 打磨
-            </button>
-          ) : null}
-        </div>
       </section>
 
       <section className="duplicate-panel" aria-label="可能重复素材">
@@ -190,14 +196,25 @@ export function MaterialInspector({
           <strong>{duplicateHints.length}</strong>
         </div>
         {duplicateHints.length > 0 ? (
-          <div className="duplicate-list">
-            {duplicateHints.slice(0, 4).map((hint) => (
-              <article key={hint.material.id} className="duplicate-item">
-                <strong>{hint.material.title}</strong>
-                <span>{hint.reasons.map(getDuplicateReasonLabel).join(" / ")}</span>
-              </article>
-            ))}
-          </div>
+          <>
+            <div className="duplicate-list">
+              {visibleDuplicateHints.map((hint) => (
+                <article key={hint.material.id} className="duplicate-item">
+                  <strong>{hint.material.title}</strong>
+                  <span>{hint.reasons.map(getDuplicateReasonLabel).join(" / ")}</span>
+                </article>
+              ))}
+            </div>
+            {duplicateHints.length > 3 ? (
+              <button
+                type="button"
+                className="link-button duplicate-expand-button"
+                onClick={() => setDuplicatesExpanded((current) => !current)}
+              >
+                {duplicatesExpanded ? "收起重复提示" : `展开其余 ${duplicateHints.length - 3} 条`}
+              </button>
+            ) : null}
+          </>
         ) : (
           <p>暂未发现明显重复。</p>
         )}
@@ -271,6 +288,22 @@ function getWorkbenchStepLabel(step: ReturnType<typeof getMaterialWorkbenchStatu
   }
 
   return "已完成";
+}
+
+function getNextActionDescription(step: ReturnType<typeof getMaterialWorkbenchStatus>["primaryStep"]): string {
+  if (step === "intake") {
+    return "这条素材已经达到质量门槛，确认后才会进入正式素材库。";
+  }
+
+  if (step === "review") {
+    return "这条素材已经入库，可以加入复习池开始间隔复习。";
+  }
+
+  if (step === "done") {
+    return "这条素材已经入库并加入复习池，可以直接开始复习。";
+  }
+
+  return "先补齐质量缺口，再确认入库和加入复习。";
 }
 
 function getReviewToggleLabel(material: MaterialDraft, reviewAllowed: boolean): string {
