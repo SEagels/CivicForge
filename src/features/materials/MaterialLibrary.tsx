@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ReviewRating } from "../../domain/enums";
 import { AnswerWorkbenchPanel } from "../answer/AnswerWorkbenchPanel";
-import type { AnswerMaterialInput } from "../answer/answerWorkbench";
+import type { AnswerMaterialInput, AnswerRewriteDraft } from "../answer/answerWorkbench";
 import { createAppDataService, type AppDataService, type StorageMode } from "../appData/appDataService";
 import { DashboardPanel } from "../dashboard/DashboardPanel";
 import { MarkdownEditor } from "../editor/MarkdownEditor";
@@ -67,6 +67,7 @@ export function MaterialLibrary() {
   const [view, setView] = useState<AppView>("dashboard");
   const [reviewFocusId, setReviewFocusId] = useState<string | null>(null);
   const [rewriteFocusId, setRewriteFocusId] = useState<string | null>(null);
+  const [answerRewriteDraft, setAnswerRewriteDraft] = useState<AnswerRewriteDraft | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>(STORAGE_MODE_PREVIEW);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [rewriteLogs, setRewriteLogs] = useState<readonly RewriteLog[]>([]);
@@ -207,6 +208,7 @@ export function MaterialLibrary() {
     setReviewFocusId(null);
     if (nextView !== "rewrite") {
       setRewriteFocusId(null);
+      setAnswerRewriteDraft(null);
     }
   }, []);
 
@@ -215,6 +217,7 @@ export function MaterialLibrary() {
   const openReview = useCallback(() => openView("review"), [openView]);
   const openRewrite = useCallback(() => {
     setRewriteFocusId(null);
+    setAnswerRewriteDraft(null);
     openView("rewrite");
   }, [openView]);
   const openImportExport = useCallback(() => openView("importExport"), [openView]);
@@ -245,6 +248,7 @@ export function MaterialLibrary() {
     }
 
     setRewriteFocusId(state.selectedId);
+    setAnswerRewriteDraft(null);
     setReviewFocusId(null);
     setView("rewrite");
   }, [state.selectedId]);
@@ -283,6 +287,13 @@ export function MaterialLibrary() {
     setRewriteFocusId(null);
     setState((current) => createMaterialFromAnswerDraft(current, input));
     setView("library");
+  }, []);
+
+  const sendAnswerDraftToRewrite = useCallback((draft: AnswerRewriteDraft) => {
+    setReviewFocusId(null);
+    setRewriteFocusId(null);
+    setAnswerRewriteDraft(draft);
+    setView("rewrite");
   }, []);
 
   const downloadArchive = useCallback(() => {
@@ -422,7 +433,11 @@ export function MaterialLibrary() {
           />
         </>
       ) : view === "answer" ? (
-        <AnswerWorkbenchPanel materials={activeMaterials} onSaveDraftAsMaterial={saveAnswerDraftAsMaterial} />
+        <AnswerWorkbenchPanel
+          materials={activeMaterials}
+          onSaveDraftAsMaterial={saveAnswerDraftAsMaterial}
+          onSendToRewrite={sendAnswerDraftToRewrite}
+        />
       ) : view === "review" ? (
         <ReviewPanel
           materials={activeMaterials}
@@ -436,6 +451,7 @@ export function MaterialLibrary() {
           materials={activeMaterials}
           logs={rewriteLogs}
           focusedMaterialId={rewriteFocusId}
+          initialDraft={answerRewriteDraft}
           onSaveLog={saveRewriteLog}
           onSaveAsMaterial={saveRewriteAsMaterial}
         />

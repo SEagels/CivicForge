@@ -43,7 +43,11 @@ describe("responsive desktop layout CSS", () => {
     expect(css).toContain(".answer-controls");
     expect(css).toContain(".callable-groups");
     expect(css).toContain(".answer-draft-card");
+    expect(css).toContain(".answer-slot-grid");
+    expect(css).toContain(".answer-slot-card");
+    expect(css).toContain(".answer-preview-card");
     expect(css).toMatch(/\.answer-controls\s*\{[\s\S]*grid-template-columns:\s*repeat\(4, minmax\(160px, 1fr\)\)/s);
     expect(css).toMatch(/@media \(max-width: 980px\)[\s\S]*\.answer-layout\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
+    expect(css).toMatch(/\.answer-slot-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/s);
   });
 });

@@ -2,11 +2,17 @@ import { describe, expect, it } from "vitest";
 import { createDefaultReviewSchedule } from "../review/reviewScheduler";
 import type { MaterialDraft } from "../materials/materialModel";
 import {
+  buildRewriteDraftFromAnswerDraft,
   buildMaterialInputFromAnswerDraft,
+  createStructuredAnswerDraft,
   getAnswerTemplate,
+  getAnswerSlots,
   groupCallableMaterials,
   insertMaterialIntoDraft,
+  insertMaterialIntoSlot,
   rankCallableMaterials,
+  renderStructuredDraftToMarkdown,
+  type AnswerWorkbenchStructuredDraft,
   type AnswerWorkbenchDraft,
 } from "./answerWorkbench";
 
@@ -139,5 +145,131 @@ describe("answer workbench", () => {
       source: "调用工作台",
       tagNames: ["调用工作台", "基层治理", "提出对策"],
     });
+  });
+
+  it("returns fixed writing slots for countermeasure and essay question types", () => {
+    expect(getAnswerSlots("countermeasure").map((slot) => slot.title)).toEqual([
+      "问题定位",
+      "对策一",
+      "对策二",
+      "执行主体",
+      "收束句",
+    ]);
+    expect(getAnswerSlots("essay").map((slot) => slot.title)).toEqual([
+      "标题",
+      "开头",
+      "分论点一",
+      "分论点二",
+      "论证素材",
+      "结尾",
+    ]);
+  });
+
+  it("creates a structured draft with slots for the selected question type", () => {
+    const draft = createStructuredAnswerDraft({
+      topicSlug: "grassroots-governance",
+      questionTypeSlug: "countermeasure",
+      goalId: "build-answer",
+      keyword: "网格",
+    });
+
+    expect(draft.slots.map((slot) => [slot.id, slot.title, slot.contentMd])).toEqual([
+      ["problem", "问题定位", ""],
+      ["measure-1", "对策一", ""],
+      ["measure-2", "对策二", ""],
+      ["owner", "执行主体", ""],
+      ["closing", "收束句", ""],
+    ]);
+  });
+
+  it("inserts selected material into a specific structured draft slot", () => {
+    const draft = createStructuredAnswerDraft({
+      topicSlug: "grassroots-governance",
+      questionTypeSlug: "countermeasure",
+      goalId: "build-answer",
+      keyword: "网格",
+    });
+    const material = baseMaterial({
+      title: "基层治理：网格服务",
+      excerpt: "把服务触角延伸到群众身边。",
+      contentMd: "推动网格服务提质增效。",
+    });
+
+    const next = insertMaterialIntoSlot(draft, "measure-1", material, "excerpt");
+
+    expect(next.slots.find((slot) => slot.id === "measure-1")?.contentMd).toBe(
+      "### 基层治理：网格服务\n> 把服务触角延伸到群众身边。",
+    );
+    expect(next.slots.find((slot) => slot.id === "measure-2")?.contentMd).toBe("");
+  });
+
+  it("renders structured draft slots to a stable markdown summary", () => {
+    const draft: AnswerWorkbenchStructuredDraft = {
+      topicSlug: "grassroots-governance",
+      questionTypeSlug: "countermeasure",
+      goalId: "build-answer",
+      keyword: "网格",
+      activeSlotId: "measure-1",
+      slots: [
+        { id: "problem", title: "问题定位", hint: "定位问题", contentMd: "基层服务触角还需前移。" },
+        { id: "measure-1", title: "对策一", hint: "第一条对策", contentMd: "推动治理资源下沉网格。" },
+        { id: "measure-2", title: "对策二", hint: "第二条对策", contentMd: "" },
+      ],
+    };
+
+    expect(renderStructuredDraftToMarkdown(draft)).toBe(
+      "## 问题定位\n基层服务触角还需前移。\n\n## 对策一\n推动治理资源下沉网格。",
+    );
+  });
+
+  it("builds material input from structured draft using rendered markdown", () => {
+    const draft = insertMaterialIntoSlot(
+      createStructuredAnswerDraft({
+        topicSlug: "grassroots-governance",
+        questionTypeSlug: "countermeasure",
+        goalId: "build-answer",
+        keyword: "网格",
+      }),
+      "measure-1",
+      baseMaterial({ title: "基层治理：网格服务", excerpt: "推动治理资源下沉基层。" }),
+      "excerpt",
+    );
+
+    const input = buildMaterialInputFromAnswerDraft(draft, new Date("2026-05-27T09:00:00.000Z"));
+
+    expect(input).toMatchObject({
+      title: "调用练习：基层治理 + 提出对策 + 2026-05-27",
+      materialType: "solution",
+      contentMd: "## 对策一\n### 基层治理：网格服务\n> 推动治理资源下沉基层。",
+      excerpt: "推动治理资源下沉基层。",
+    });
+  });
+
+  it("builds a Rewrite draft from structured answer draft with question-aware default target", () => {
+    const countermeasureDraft = insertMaterialIntoSlot(
+      createStructuredAnswerDraft({
+        topicSlug: "grassroots-governance",
+        questionTypeSlug: "countermeasure",
+        goalId: "build-answer",
+        keyword: "",
+      }),
+      "problem",
+      baseMaterial({ excerpt: "基层治理需要补齐服务短板。" }),
+      "excerpt",
+    );
+    const essayDraft = createStructuredAnswerDraft({
+      topicSlug: "grassroots-governance",
+      questionTypeSlug: "essay",
+      goalId: "build-answer",
+      keyword: "",
+    });
+
+    expect(buildRewriteDraftFromAnswerDraft(countermeasureDraft)).toMatchObject({
+      sourceMaterialId: "",
+      targetId: "compress",
+      originalText: "## 问题定位\n### 基层治理规范表达\n> 基层治理需要补齐服务短板。",
+      resultText: "",
+    });
+    expect(buildRewriteDraftFromAnswerDraft(essayDraft).targetId).toBe("expand_argument");
   });
 });

@@ -14,6 +14,7 @@ import {
   getRewriteDraftFromLog,
   getRewriteMetrics,
   getRewritePromptCopyStatus,
+  type RewriteDraft,
   type RewriteHistoryFilter,
   type RewritePromptCopyState,
 } from "./rewriteWorkspace";
@@ -22,11 +23,19 @@ interface RewritePanelProps {
   readonly materials: readonly MaterialDraft[];
   readonly logs: readonly RewriteLog[];
   readonly focusedMaterialId?: string | null;
+  readonly initialDraft?: RewriteDraft | null;
   readonly onSaveLog: (log: RewriteLog) => void;
   readonly onSaveAsMaterial: (log: RewriteLog) => void;
 }
 
-export function RewritePanel({ materials, logs, focusedMaterialId, onSaveLog, onSaveAsMaterial }: RewritePanelProps) {
+export function RewritePanel({
+  materials,
+  logs,
+  focusedMaterialId,
+  initialDraft,
+  onSaveLog,
+  onSaveAsMaterial,
+}: RewritePanelProps) {
   const [sourceMaterialId, setSourceMaterialId] = useState("");
   const [targetId, setTargetId] = useState<RewriteTargetId>("compress");
   const [originalText, setOriginalText] = useState("");
@@ -71,6 +80,19 @@ export function RewritePanel({ materials, logs, focusedMaterialId, onSaveLog, on
       importMaterial(focusedMaterialId);
     }
   }, [focusedMaterialId, importMaterial]);
+
+  useEffect(() => {
+    if (!initialDraft) {
+      return;
+    }
+
+    setSourceMaterialId(initialDraft.sourceMaterialId);
+    setTargetId(initialDraft.targetId);
+    setOriginalText(initialDraft.originalText);
+    setResultText(initialDraft.resultText);
+    setExtraInstruction(initialDraft.extraInstruction);
+    setLastSavedLog(null);
+  }, [initialDraft]);
 
   const copyPrompt = async () => {
     try {

@@ -3,24 +3,30 @@ import { BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialDraft } from "../materials/materialModel";
 import {
   ANSWER_GOAL_IDS,
+  buildRewriteDraftFromAnswerDraft,
   buildMaterialInputFromAnswerDraft,
+  createStructuredAnswerDraft,
   getAnswerTemplate,
   getMaterialTypeLabel,
   getQuestionTypeLabel,
   getTopicLabel,
   groupCallableMaterials,
-  insertMaterialIntoDraft,
+  insertMaterialIntoSlot,
   rankCallableMaterials,
+  renderStructuredDraftToMarkdown,
+  updateStructuredDraftSlot,
   type AnswerGoalId,
   type AnswerMaterialInput,
-  type AnswerTemplateSection,
-  type AnswerWorkbenchDraft,
+  type AnswerRewriteDraft,
+  type AnswerSlot,
+  type AnswerWorkbenchStructuredDraft,
   type CallableMaterialScore,
 } from "./answerWorkbench";
 
 interface AnswerWorkbenchPanelProps {
   readonly materials: readonly MaterialDraft[];
   readonly onSaveDraftAsMaterial: (input: AnswerMaterialInput) => void;
+  readonly onSendToRewrite: (draft: AnswerRewriteDraft) => void;
 }
 
 const ANSWER_GOAL_LABELS: Record<AnswerGoalId, string> = {
@@ -32,14 +38,15 @@ const ANSWER_GOAL_LABELS: Record<AnswerGoalId, string> = {
 
 const EXPRESSION_TYPES = new Set(["standard-expression", "golden-sentence", "title-sentence", "transition-sentence"]);
 
-export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial }: AnswerWorkbenchPanelProps) {
-  const [draft, setDraft] = useState<AnswerWorkbenchDraft>({
-    topicSlug: "grassroots-governance",
-    questionTypeSlug: "countermeasure",
-    goalId: "build-answer",
-    keyword: "",
-    contentMd: "",
-  });
+export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial, onSendToRewrite }: AnswerWorkbenchPanelProps) {
+  const [draft, setDraft] = useState<AnswerWorkbenchStructuredDraft>(() =>
+    createStructuredAnswerDraft({
+      topicSlug: "grassroots-governance",
+      questionTypeSlug: "countermeasure",
+      goalId: "build-answer",
+      keyword: "",
+    }),
+  );
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const template = useMemo(() => getAnswerTemplate(draft.questionTypeSlug), [draft.questionTypeSlug]);
   const ranked = useMemo(() => rankCallableMaterials(materials, draft), [draft, materials]);
@@ -51,30 +58,43 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial }: Answe
     () => ranked.filter((item) => EXPRESSION_TYPES.has(item.material.materialType)).slice(0, 6),
     [ranked],
   );
-  const canSaveDraft = draft.contentMd.trim().length > 0;
+  const renderedMarkdown = useMemo(() => renderStructuredDraftToMarkdown(draft), [draft]);
+  const activeSlot = useMemo(
+    () => draft.slots.find((slot) => slot.id === draft.activeSlotId) ?? draft.slots[0],
+    [draft.activeSlotId, draft.slots],
+  );
+  const canUseDraft = renderedMarkdown.trim().length > 0;
 
-  const updateDraft = (patch: Partial<AnswerWorkbenchDraft>) => {
+  const updateDraft = (patch: Partial<Pick<AnswerWorkbenchStructuredDraft, "topicSlug" | "goalId" | "keyword">>) => {
     setDraft((current) => ({ ...current, ...patch }));
     setCopyState("idle");
   };
 
-  const insertMaterial = (material: MaterialDraft, mode: "title" | "excerpt" | "content") => {
-    setDraft((current) => insertMaterialIntoDraft(current, material, mode));
+  const changeQuestionType = (questionTypeSlug: string) => {
+    setDraft((current) =>
+      createStructuredAnswerDraft({
+        topicSlug: current.topicSlug,
+        questionTypeSlug,
+        goalId: current.goalId,
+        keyword: current.keyword,
+      }),
+    );
     setCopyState("idle");
   };
 
-  const insertSection = (section: AnswerTemplateSection) => {
-    const text = [`## ${section.title}`, section.placeholders[0] ?? section.description].join("\n");
-    setDraft((current) => ({
-      ...current,
-      contentMd: `${current.contentMd.trimEnd()}${current.contentMd.trim() ? "\n\n" : ""}${text}`,
-    }));
+  const insertMaterial = (material: MaterialDraft, mode: "title" | "excerpt" | "content") => {
+    setDraft((current) => insertMaterialIntoSlot(current, current.activeSlotId, material, mode));
+    setCopyState("idle");
+  };
+
+  const updateSlotContent = (slotId: string, contentMd: string) => {
+    setDraft((current) => updateStructuredDraftSlot(current, slotId, contentMd));
     setCopyState("idle");
   };
 
   const copyDraft = async () => {
     try {
-      await navigator.clipboard.writeText(draft.contentMd);
+      await navigator.clipboard.writeText(renderedMarkdown);
       setCopyState("copied");
     } catch {
       setCopyState("failed");
@@ -82,11 +102,19 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial }: Answe
   };
 
   const saveDraft = () => {
-    if (!canSaveDraft) {
+    if (!canUseDraft) {
       return;
     }
 
     onSaveDraftAsMaterial(buildMaterialInputFromAnswerDraft(draft));
+  };
+
+  const sendToRewrite = () => {
+    if (!canUseDraft) {
+      return;
+    }
+
+    onSendToRewrite(buildRewriteDraftFromAnswerDraft(draft));
   };
 
   return (
@@ -117,7 +145,7 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial }: Answe
           <span>题型</span>
           <select
             value={draft.questionTypeSlug}
-            onChange={(event) => updateDraft({ questionTypeSlug: event.target.value })}
+            onChange={(event) => changeQuestionType(event.target.value)}
           >
             {BUILTIN_QUESTION_TYPES.map((questionType) => (
               <option key={questionType.slug} value={questionType.slug}>
@@ -157,6 +185,19 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial }: Answe
             </div>
             <span>{ANSWER_GOAL_LABELS[draft.goalId]}</span>
           </div>
+          <label className="answer-active-slot">
+            <span>当前插入槽位</span>
+            <select
+              value={draft.activeSlotId}
+              onChange={(event) => setDraft((current) => ({ ...current, activeSlotId: event.target.value }))}
+            >
+              {draft.slots.map((slot) => (
+                <option key={slot.id} value={slot.id}>
+                  {slot.title}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {groupedMaterials.length === 0 ? (
             <div className="empty-list">
@@ -197,21 +238,20 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial }: Answe
           <section className="answer-template-card">
             <div className="answer-section-title compact">
               <div>
-                <p className="eyebrow">Template</p>
+                <p className="eyebrow">Slots</p>
                 <h2>{template.title}</h2>
               </div>
+              <span>{activeSlot?.title ?? "未选择"}</span>
             </div>
-            <div className="answer-template-list">
-              {template.sections.map((section) => (
-                <article key={section.id} className="answer-template-section">
-                  <div>
-                    <strong>{section.title}</strong>
-                    <span>{section.description}</span>
-                  </div>
-                  <button type="button" className="link-button" onClick={() => insertSection(section)}>
-                    插入结构
-                  </button>
-                </article>
+            <div className="answer-slot-grid" aria-label="结构槽位">
+              {draft.slots.map((slot) => (
+                <AnswerSlotCard
+                  key={slot.id}
+                  slot={slot}
+                  active={slot.id === draft.activeSlotId}
+                  onActivate={() => setDraft((current) => ({ ...current, activeSlotId: slot.id }))}
+                  onChange={(contentMd) => updateSlotContent(slot.id, contentMd)}
+                />
               ))}
             </div>
           </section>
@@ -245,24 +285,23 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial }: Answe
             )}
           </section>
 
-          <section className="answer-draft-card">
+          <section className="answer-preview-card answer-draft-card">
             <div className="answer-section-title compact">
               <div>
-                <p className="eyebrow">Draft</p>
-                <h2>调用草稿</h2>
+                <p className="eyebrow">Markdown</p>
+                <h2>汇总预览</h2>
               </div>
-              <span>{draft.contentMd.trim().length} 字</span>
+              <span>{renderedMarkdown.trim().length} 字</span>
             </div>
-            <textarea
-              value={draft.contentMd}
-              onChange={(event) => updateDraft({ contentMd: event.target.value })}
-              placeholder="从左侧素材或右侧结构插入内容，也可以直接写 Markdown 草稿。"
-            />
+            <pre>{renderedMarkdown || "选择槽位并插入素材后，这里会生成可复制的 Markdown 汇总。"}</pre>
             <div className="answer-draft-actions">
-              <button type="button" className="ghost-button" onClick={copyDraft} disabled={!canSaveDraft}>
+              <button type="button" className="ghost-button" onClick={copyDraft} disabled={!canUseDraft}>
                 {copyState === "copied" ? "已复制" : copyState === "failed" ? "复制失败" : "复制全文"}
               </button>
-              <button type="button" className="primary-button" onClick={saveDraft} disabled={!canSaveDraft}>
+              <button type="button" className="ghost-button" onClick={sendToRewrite} disabled={!canUseDraft}>
+                送去 Rewrite 打磨
+              </button>
+              <button type="button" className="primary-button" onClick={saveDraft} disabled={!canUseDraft}>
                 保存为新素材
               </button>
             </div>
@@ -270,6 +309,34 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial }: Answe
         </aside>
       </div>
     </section>
+  );
+}
+
+function AnswerSlotCard({
+  slot,
+  active,
+  onActivate,
+  onChange,
+}: {
+  readonly slot: AnswerSlot;
+  readonly active: boolean;
+  readonly onActivate: () => void;
+  readonly onChange: (contentMd: string) => void;
+}) {
+  return (
+    <article className={active ? "answer-slot-card active" : "answer-slot-card"}>
+      <button type="button" className="answer-slot-header" onClick={onActivate}>
+        <strong>{slot.title}</strong>
+        <span>{slot.hint}</span>
+      </button>
+      <textarea
+        value={slot.contentMd}
+        onChange={(event) => onChange(event.target.value)}
+        onFocus={onActivate}
+        placeholder="选择素材后插入到这里，也可以手动补写。"
+        aria-label={`${slot.title}槽位`}
+      />
+    </article>
   );
 }
 

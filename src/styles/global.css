@@ -3883,6 +3883,8 @@ nav button.active {
 .answer-section-title span,
 .answer-template-section span,
 .answer-expression span,
+.answer-active-slot span,
+.answer-slot-header span,
 .callable-card-header span,
 .callable-card p,
 .callable-reasons span,
@@ -3894,7 +3896,9 @@ nav button.active {
 
 .answer-controls input,
 .answer-controls select,
-.answer-draft-card textarea {
+.answer-active-slot select,
+.answer-draft-card textarea,
+.answer-slot-card textarea {
   background: var(--surface-control);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
@@ -3905,14 +3909,17 @@ nav button.active {
 }
 
 .answer-controls input,
-.answer-controls select {
+.answer-controls select,
+.answer-active-slot select {
   height: 38px;
   padding: 0 10px;
 }
 
 .answer-controls input:focus,
 .answer-controls select:focus,
-.answer-draft-card textarea:focus {
+.answer-active-slot select:focus,
+.answer-draft-card textarea:focus,
+.answer-slot-card textarea:focus {
   border-color: var(--accent-line);
   box-shadow: 0 0 0 3px rgb(59 126 112 / 14%);
 }
@@ -3928,6 +3935,7 @@ nav button.active {
 .answer-side-column,
 .callable-groups,
 .callable-card-list,
+.answer-slot-grid,
 .answer-template-list,
 .answer-expression-list {
   display: grid;
@@ -3966,9 +3974,23 @@ nav button.active {
   padding: 6px 10px;
 }
 
+.answer-active-slot {
+  align-items: center;
+  background: var(--surface-glass-strong);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
+  padding: 10px 12px;
+}
+
 .callable-group,
 .answer-template-card,
-.answer-draft-card {
+.answer-draft-card,
+.answer-preview-card {
   background: var(--surface-glass-strong);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-lg);
@@ -3989,6 +4011,7 @@ nav button.active {
 .callable-group-header strong,
 .callable-card-header strong,
 .answer-template-section strong,
+.answer-slot-header strong,
 .answer-expression strong {
   color: var(--text-primary);
   font-size: 14px;
@@ -4071,6 +4094,45 @@ nav button.active {
   padding: 4px 8px;
 }
 
+.answer-slot-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+.answer-slot-card {
+  background: var(--surface-panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.answer-slot-card.active {
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-panel);
+}
+
+.answer-slot-header {
+  background: transparent;
+  border: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.answer-slot-card textarea {
+  line-height: 1.65;
+  min-height: 120px;
+  padding: 11px;
+  resize: vertical;
+}
+
 .answer-template-section {
   align-items: flex-start;
   border-top: 1px solid var(--line-soft);
@@ -4125,6 +4187,22 @@ nav button.active {
   resize: vertical;
 }
 
+.answer-preview-card pre {
+  background: var(--surface-control);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  line-height: 1.75;
+  margin: 0;
+  max-height: 320px;
+  min-height: 180px;
+  min-width: 0;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
 .answer-draft-actions {
   justify-content: flex-end;
 }
@@ -4172,15 +4250,19 @@ nav button.active {
 
   .answer-section-title,
   .callable-card-header,
-  .answer-template-section {
+  .answer-template-section,
+  .answer-active-slot {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 :root[data-theme="dark"] .answer-controls,
+:root[data-theme="dark"] .answer-active-slot,
 :root[data-theme="dark"] .callable-group,
 :root[data-theme="dark"] .answer-template-card,
 :root[data-theme="dark"] .answer-draft-card,
+:root[data-theme="dark"] .answer-preview-card,
+:root[data-theme="dark"] .answer-slot-card,
 :root[data-theme="dark"] .callable-card,
 :root[data-theme="dark"] .answer-expression {
   background: var(--surface-panel);
@@ -4191,7 +4273,10 @@ nav button.active {
 
 :root[data-theme="dark"] .answer-controls input,
 :root[data-theme="dark"] .answer-controls select,
-:root[data-theme="dark"] .answer-draft-card textarea {
+:root[data-theme="dark"] .answer-active-slot select,
+:root[data-theme="dark"] .answer-draft-card textarea,
+:root[data-theme="dark"] .answer-slot-card textarea,
+:root[data-theme="dark"] .answer-preview-card pre {
   background: var(--surface-control);
   border-color: var(--line-soft);
   color: var(--text-primary);

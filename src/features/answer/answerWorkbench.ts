@@ -1,6 +1,7 @@
 import type { MaterialTypeId } from "../../domain/enums";
 import { getMaterialQualityReport } from "../materials/materialQuality";
 import type { MaterialDraft } from "../materials/materialModel";
+import type { RewriteTargetId } from "../rewrite/rewriteWorkshop";
 
 export const ANSWER_GOAL_IDS = ["call-materials", "build-answer", "polish-expression", "draft-paragraph"] as const;
 
@@ -46,7 +47,31 @@ export interface AnswerWorkbenchDraft {
   readonly contentMd: string;
 }
 
+export interface AnswerSlot {
+  readonly id: string;
+  readonly title: string;
+  readonly hint: string;
+  readonly contentMd: string;
+}
+
+export interface AnswerWorkbenchStructuredDraft {
+  readonly topicSlug: string;
+  readonly questionTypeSlug: string;
+  readonly goalId: AnswerGoalId;
+  readonly keyword: string;
+  readonly activeSlotId: string;
+  readonly slots: readonly AnswerSlot[];
+}
+
 export type AnswerDraftInsertMode = "title" | "excerpt" | "content";
+
+export interface AnswerRewriteDraft {
+  readonly sourceMaterialId: string;
+  readonly targetId: RewriteTargetId;
+  readonly originalText: string;
+  readonly resultText: string;
+  readonly extraInstruction: string;
+}
 
 export interface AnswerMaterialInput {
   readonly title: string;
@@ -284,6 +309,53 @@ const ANSWER_TEMPLATES: Record<string, AnswerTemplate> = {
   },
 };
 
+const ANSWER_SLOT_TEMPLATES: Record<string, readonly Omit<AnswerSlot, "contentMd">[]> = {
+  summary: [
+    { id: "overview", title: "总括句", hint: "一句话概括材料对象、范围和核心表现。" },
+    { id: "point-1", title: "要点一", hint: "按主体、领域或表现拆出第一层要点。" },
+    { id: "point-2", title: "要点二", hint: "补充第二层要点，保持概括而不展开论证。" },
+    { id: "closing", title: "规范收束", hint: "用一句规范表达收住共性。" },
+  ],
+  countermeasure: [
+    { id: "problem", title: "问题定位", hint: "先点明要解决的问题和约束。" },
+    { id: "measure-1", title: "对策一", hint: "写第一条可执行措施。" },
+    { id: "measure-2", title: "对策二", hint: "写第二条可执行措施。" },
+    { id: "owner", title: "执行主体", hint: "说明牵头主体、协同主体和落地方式。" },
+    { id: "closing", title: "收束句", hint: "用一句话形成闭环。" },
+  ],
+  analysis: [
+    { id: "stance", title: "表态", hint: "先明确判断和基本态度。" },
+    { id: "reason", title: "原因分析", hint: "分析现象背后的机制和矛盾。" },
+    { id: "impact", title: "影响分析", hint: "说明积极意义、风险或现实影响。" },
+    { id: "action", title: "对策启示", hint: "回到治理或实践落点。" },
+  ],
+  implementation: [
+    { id: "title", title: "标题", hint: "明确文种标题。" },
+    { id: "background", title: "背景目的", hint: "交代背景、对象和目的。" },
+    { id: "matter", title: "主要事项", hint: "按事项组织正文。" },
+    { id: "requirement", title: "工作要求", hint: "提出执行要求或号召。" },
+  ],
+  essay: [
+    { id: "title", title: "标题", hint: "形成文章标题或中心论点。" },
+    { id: "opening", title: "开头", hint: "背景引入并点明主题。" },
+    { id: "argument-1", title: "分论点一", hint: "第一层论证观点。" },
+    { id: "argument-2", title: "分论点二", hint: "第二层论证观点。" },
+    { id: "evidence", title: "论证素材", hint: "放入案例、规范表达或金句。" },
+    { id: "ending", title: "结尾", hint: "总结升华并回扣主题。" },
+  ],
+  "interview-analysis": [
+    { id: "stance", title: "表态", hint: "先给出明确态度。" },
+    { id: "analysis", title: "分析", hint: "从原因、影响或价值展开。" },
+    { id: "action", title: "做法", hint: "说清自己或组织层面的行动。" },
+    { id: "closing", title: "收束", hint: "自然收束，避免空喊口号。" },
+  ],
+  general: [
+    { id: "point", title: "核心表达", hint: "沉淀可直接调用的规范表达。" },
+    { id: "support", title: "支撑素材", hint: "补充案例、数据或政策表述。" },
+    { id: "closing", title: "收束句", hint: "形成一句完整落点。" },
+  ],
+};
+
 export function rankCallableMaterials(
   materials: readonly MaterialDraft[],
   filters: AnswerWorkbenchFilters,
@@ -322,6 +394,21 @@ export function getAnswerTemplate(questionTypeSlug: string): AnswerTemplate {
   return ANSWER_TEMPLATES[questionTypeSlug] ?? ANSWER_TEMPLATES.summary;
 }
 
+export function getAnswerSlots(questionTypeSlug: string): readonly AnswerSlot[] {
+  const slotTemplates = ANSWER_SLOT_TEMPLATES[questionTypeSlug] ?? ANSWER_SLOT_TEMPLATES.general;
+  return slotTemplates.map((slot) => ({ ...slot, contentMd: "" }));
+}
+
+export function createStructuredAnswerDraft(input: AnswerWorkbenchFilters): AnswerWorkbenchStructuredDraft {
+  const slots = getAnswerSlots(input.questionTypeSlug);
+
+  return {
+    ...input,
+    activeSlotId: slots[0]?.id ?? "",
+    slots,
+  };
+}
+
 export function insertMaterialIntoDraft(
   draft: AnswerWorkbenchDraft,
   material: MaterialDraft,
@@ -336,13 +423,65 @@ export function insertMaterialIntoDraft(
   };
 }
 
+export function insertMaterialIntoSlot(
+  draft: AnswerWorkbenchStructuredDraft,
+  slotId: string,
+  material: MaterialDraft,
+  mode: AnswerDraftInsertMode,
+): AnswerWorkbenchStructuredDraft {
+  const snippet = buildMaterialSnippet(material, mode);
+  let foundSlot = false;
+  const slots = draft.slots.map((slot) => {
+    if (slot.id !== slotId) {
+      return slot;
+    }
+
+    foundSlot = true;
+    const separator = slot.contentMd.trim().length > 0 ? "\n\n" : "";
+    return {
+      ...slot,
+      contentMd: `${slot.contentMd.trimEnd()}${separator}${snippet}`,
+    };
+  });
+
+  return foundSlot
+    ? {
+        ...draft,
+        activeSlotId: slotId,
+        slots,
+      }
+    : draft;
+}
+
+export function updateStructuredDraftSlot(
+  draft: AnswerWorkbenchStructuredDraft,
+  slotId: string,
+  contentMd: string,
+): AnswerWorkbenchStructuredDraft {
+  return {
+    ...draft,
+    activeSlotId: slotId,
+    slots: draft.slots.map((slot) => (slot.id === slotId ? { ...slot, contentMd } : slot)),
+  };
+}
+
+export function renderStructuredDraftToMarkdown(draft: AnswerWorkbenchStructuredDraft): string {
+  return draft.slots
+    .map((slot) => {
+      const content = slot.contentMd.trim();
+      return content ? `## ${slot.title}\n${content}` : "";
+    })
+    .filter((section) => section.length > 0)
+    .join("\n\n");
+}
+
 export function buildMaterialInputFromAnswerDraft(
-  draft: AnswerWorkbenchDraft,
+  draft: AnswerWorkbenchDraft | AnswerWorkbenchStructuredDraft,
   now: Date = new Date(),
 ): AnswerMaterialInput {
   const topicName = getTopicLabel(draft.topicSlug);
   const questionTypeName = getQuestionTypeLabel(draft.questionTypeSlug);
-  const contentMd = draft.contentMd.trim();
+  const contentMd = getDraftMarkdown(draft);
 
   return {
     title: `调用练习：${topicName} + ${questionTypeName} + ${formatDate(now)}`,
@@ -356,6 +495,16 @@ export function buildMaterialInputFromAnswerDraft(
   };
 }
 
+export function buildRewriteDraftFromAnswerDraft(draft: AnswerWorkbenchStructuredDraft): AnswerRewriteDraft {
+  return {
+    sourceMaterialId: "",
+    targetId: draft.questionTypeSlug === "essay" ? "expand_argument" : "compress",
+    originalText: renderStructuredDraftToMarkdown(draft),
+    resultText: "",
+    extraInstruction: "来自调用工作台草稿，请保持申论表达规范、准确、可直接调用。",
+  };
+}
+
 export function getTopicLabel(topicSlug: string): string {
   return TOPIC_LABELS[topicSlug] ?? topicSlug;
 }
@@ -366,6 +515,10 @@ export function getQuestionTypeLabel(questionTypeSlug: string): string {
 
 export function getMaterialTypeLabel(materialType: MaterialTypeId): string {
   return MATERIAL_TYPE_LABELS[materialType];
+}
+
+function getDraftMarkdown(draft: AnswerWorkbenchDraft | AnswerWorkbenchStructuredDraft): string {
+  return "slots" in draft ? renderStructuredDraftToMarkdown(draft) : draft.contentMd.trim();
 }
 
 function scoreMaterial(
