@@ -29,6 +29,7 @@ import {
 } from "./materialFilters";
 import {
   archiveSelectedMaterial,
+  confirmSelectedMaterial,
   createInitialMaterialState,
   createMaterial,
   createMaterialFromSource,
@@ -41,7 +42,8 @@ import {
   type MaterialPatch,
 } from "./materialModel";
 import { formatMaterialSaveStatus, type MaterialSaveStatus } from "./materialSaveStatus";
-import { getWorkbenchCandidates } from "./materialWorkbench";
+import { getMaterialDuplicateHints } from "./materialQuality";
+import { getWorkbenchCandidates, getWorkbenchStats } from "./materialWorkbench";
 
 type AppView = "dashboard" | "library" | "review" | "rewrite" | "graph" | "taxonomy" | "importExport" | "settings";
 
@@ -64,12 +66,17 @@ export function MaterialLibrary() {
   const activeMaterials = useMemo(() => getActiveMaterials(state), [state]);
   const filteredMaterials = useMemo(() => filterMaterials(activeMaterials, filters), [activeMaterials, filters]);
   const workbenchCount = useMemo(() => getWorkbenchCandidates(activeMaterials).length, [activeMaterials]);
+  const workbenchStats = useMemo(() => getWorkbenchStats(activeMaterials), [activeMaterials]);
   const availableTags = useMemo(() => getAvailableTags(activeMaterials), [activeMaterials]);
   const linkableMaterials = useMemo(
     () => activeMaterials.map((material) => ({ id: material.id, title: material.title })),
     [activeMaterials],
   );
   const selectedMaterial = useMemo(() => getSelectedMaterial(state), [state]);
+  const selectedDuplicateHints = useMemo(
+    () => (selectedMaterial ? getMaterialDuplicateHints(selectedMaterial, activeMaterials) : []),
+    [activeMaterials, selectedMaterial],
+  );
   const filtersActive = hasActiveFilters(filters);
   const archiveJson = useMemo(
     () =>
@@ -221,6 +228,10 @@ export function MaterialLibrary() {
     setView("rewrite");
   }, [state.selectedId]);
 
+  const confirmSelected = useCallback(() => {
+    setState((current) => confirmSelectedMaterial(current));
+  }, []);
+
   const rateMaterial = useCallback((materialId: string, rating: ReviewRating) => {
     setReviewFocusId(null);
     setState((current) => reviewMaterial(current, materialId, rating));
@@ -327,6 +338,7 @@ export function MaterialLibrary() {
             filters={filters}
             totalCount={activeMaterials.length}
             workbenchCount={workbenchCount}
+            workbenchStats={workbenchStats}
             tags={availableTags}
             hasActiveFilters={filtersActive}
             onSelect={(id) => setState((current) => selectMaterial(current, id))}
@@ -368,8 +380,10 @@ export function MaterialLibrary() {
 
           <MaterialInspector
             material={selectedMaterial}
+            duplicateHints={selectedDuplicateHints}
             onChange={updateSelected}
             onArchive={() => setState((current) => archiveSelectedMaterial(current))}
+            onConfirm={confirmSelected}
             onStartReview={startSelectedReview}
             onStartRewrite={startSelectedRewrite}
             onResetExamples={resetExampleMaterials}

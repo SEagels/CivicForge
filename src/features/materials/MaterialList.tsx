@@ -2,7 +2,11 @@ import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialFilters } from "./materialFilters";
 import type { MaterialDraft } from "./materialModel";
-import { getMaterialWorkbenchStatus, type MaterialWorkbenchStage } from "./materialWorkbench";
+import {
+  getMaterialWorkbenchStatus,
+  type MaterialWorkbenchStats,
+  type MaterialWorkbenchStatus,
+} from "./materialWorkbench";
 
 interface MaterialListProps {
   readonly materials: readonly MaterialDraft[];
@@ -10,6 +14,7 @@ interface MaterialListProps {
   readonly filters: MaterialFilters;
   readonly totalCount: number;
   readonly workbenchCount: number;
+  readonly workbenchStats: MaterialWorkbenchStats;
   readonly tags: readonly string[];
   readonly hasActiveFilters: boolean;
   readonly onSelect: (id: string) => void;
@@ -27,6 +32,7 @@ export function MaterialList({
   filters,
   totalCount,
   workbenchCount,
+  workbenchStats,
   tags,
   hasActiveFilters,
   onSelect,
@@ -150,6 +156,12 @@ export function MaterialList({
             </button>
           ) : null}
         </div>
+        <div className="workbench-mini-stats" aria-label="加工台统计">
+          <span>候选 {workbenchStats.candidateCount}</span>
+          <span>待分类 {workbenchStats.classifyCount}</span>
+          <span>待入库 {workbenchStats.intakeReadyCount}</span>
+          <span>待复习 {workbenchStats.reviewReadyCount}</span>
+        </div>
       </div>
 
       <div className="material-items">
@@ -172,7 +184,7 @@ export function MaterialList({
                 <span className="material-card-topline">
                   <span className="material-title">{material.title}</span>
                   <span className={`material-status-badge ${workbenchStatus.stage}`}>
-                    {getWorkbenchStageLabel(workbenchStatus.stage)}
+                    {getWorkbenchStageLabel(workbenchStatus)}
                   </span>
                 </span>
                 <span className="material-meta">
@@ -188,16 +200,20 @@ export function MaterialList({
   );
 }
 
-function getWorkbenchStageLabel(stage: MaterialWorkbenchStage): string {
-  if (stage === "candidate") {
+function getWorkbenchStageLabel(status: MaterialWorkbenchStatus): string {
+  if (status.stage === "candidate") {
     return "候选";
   }
 
-  if (stage === "refining") {
+  if (status.stage === "refining") {
     return "待打磨";
   }
 
-  if (stage === "ready") {
+  if (status.primaryStep === "intake") {
+    return "待入库";
+  }
+
+  if (status.stage === "ready") {
     return "可复习";
   }
 

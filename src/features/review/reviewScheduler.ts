@@ -61,7 +61,7 @@ export function readReviewSchedule(material: Partial<ReviewSchedule>): ReviewSch
 }
 
 function isReviewable(material: MaterialDraft): boolean {
-  return material.reviewEnabled && canMaterialEnterReview(material) && (material.status === "active" || material.status === "draft");
+  return material.reviewEnabled && material.status === "active" && canMaterialEnterReview(material);
 }
 
 function isDueAt(material: MaterialDraft, deadline: Date): boolean {

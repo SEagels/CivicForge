@@ -200,13 +200,34 @@ export function updateSelectedMaterial(state: MaterialState, patch: MaterialPatc
       const nextMaterial = {
         ...material,
         ...patch,
-        status: material.status === "draft" && hasMeaningfulContent(patch) ? "active" : material.status,
         updatedAt: nowIso(),
       };
 
       return {
         ...nextMaterial,
-        reviewEnabled: nextMaterial.reviewEnabled && canMaterialEnterReview(nextMaterial),
+        reviewEnabled: nextMaterial.reviewEnabled && canMaterialBeReviewed(nextMaterial),
+      };
+    }),
+  };
+}
+
+export function confirmSelectedMaterial(state: MaterialState): MaterialState {
+  if (!state.selectedId) {
+    return state;
+  }
+
+  return {
+    ...state,
+    materials: state.materials.map((material) => {
+      if (material.id !== state.selectedId || !canMaterialEnterReview(material)) {
+        return material;
+      }
+
+      return {
+        ...material,
+        status: "active" as const,
+        reviewEnabled: false,
+        updatedAt: nowIso(),
       };
     }),
   };
@@ -266,10 +287,10 @@ function normalizeMaterialDraft(material: MaterialDraft): MaterialDraft {
 
   return {
     ...normalized,
-    reviewEnabled: normalized.reviewEnabled && canMaterialEnterReview(normalized),
+    reviewEnabled: normalized.reviewEnabled && canMaterialBeReviewed(normalized),
   };
 }
 
-function hasMeaningfulContent(patch: MaterialPatch): boolean {
-  return Boolean(patch.title?.trim() || patch.contentMd?.trim());
+function canMaterialBeReviewed(material: MaterialDraft): boolean {
+  return material.status === "active" && canMaterialEnterReview(material);
 }

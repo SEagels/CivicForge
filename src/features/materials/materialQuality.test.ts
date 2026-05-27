@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MaterialDraft } from "./materialModel";
-import { getMaterialQualityReport, getPotentialDuplicateMaterials } from "./materialQuality";
+import { getMaterialDuplicateHints, getMaterialQualityReport, getPotentialDuplicateMaterials } from "./materialQuality";
 
 describe("material quality", () => {
   it("approves a sourced, classified, reusable material for review", () => {
@@ -72,6 +72,24 @@ describe("material quality", () => {
     expect(getPotentialDuplicateMaterials(current, [current, unrelated, duplicateByContent, duplicateByTitle])).toEqual([
       duplicateByContent,
       duplicateByTitle,
+    ]);
+  });
+
+  it("explains duplicate hints by title, content overlap, and source", () => {
+    const current = makeMaterial({
+      id: "current",
+      title: "基层治理：网格服务",
+      contentMd: "推动治理资源下沉网格，提升基层服务效能。",
+      source: "https://www.gov.cn/example.html",
+    });
+    const sameTitle = makeMaterial({ id: "same-title", title: "基层治理：网格服务", source: "另一个来源" });
+    const sameContent = makeMaterial({ id: "same-content", title: "另一条", contentMd: "推动治理资源下沉网格，提升基层服务效能。" });
+    const sameSource = makeMaterial({ id: "same-source", title: "不同标题", source: "https://www.gov.cn/example.html" });
+
+    expect(getMaterialDuplicateHints(current, [current, sameSource, sameContent, sameTitle])).toEqual([
+      { material: sameSource, reasons: ["same-source"] },
+      { material: sameContent, reasons: ["same-content"] },
+      { material: sameTitle, reasons: ["same-title"] },
     ]);
   });
 });

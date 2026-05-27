@@ -1,13 +1,19 @@
 import type { MaterialTypeId } from "../../domain/enums";
 import { BUILTIN_MATERIAL_TYPES, BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
 import type { MaterialDraft, MaterialPatch } from "./materialModel";
-import { getMaterialQualityReport, type MaterialQualityLevel } from "./materialQuality";
+import {
+  getMaterialQualityReport,
+  type MaterialDuplicateHint,
+  type MaterialQualityLevel,
+} from "./materialQuality";
 import { getMaterialWorkbenchStatus } from "./materialWorkbench";
 
 interface MaterialInspectorProps {
   readonly material: MaterialDraft | null;
+  readonly duplicateHints: readonly MaterialDuplicateHint[];
   readonly onChange: (patch: MaterialPatch) => void;
   readonly onArchive: () => void;
+  readonly onConfirm: () => void;
   readonly onStartReview: () => void;
   readonly onStartRewrite: () => void;
   readonly onResetExamples: () => void;
@@ -15,8 +21,10 @@ interface MaterialInspectorProps {
 
 export function MaterialInspector({
   material,
+  duplicateHints,
   onChange,
   onArchive,
+  onConfirm,
   onStartReview,
   onStartRewrite,
   onResetExamples,
@@ -158,6 +166,11 @@ export function MaterialInspector({
           <p>这条素材已经满足质量门槛，可以进入复习。</p>
         )}
         <div className="workbench-actions">
+          {workbenchStatus.primaryStep === "intake" ? (
+            <button type="button" className="primary-button" onClick={onConfirm}>
+              确认入库
+            </button>
+          ) : null}
           {workbenchStatus.primaryStep === "review" ? (
             <button type="button" className="primary-button" onClick={() => onChange({ reviewEnabled: true })}>
               加入复习
@@ -171,21 +184,40 @@ export function MaterialInspector({
         </div>
       </section>
 
+      <section className="duplicate-panel" aria-label="可能重复素材">
+        <div className="duplicate-panel-header">
+          <span>可能重复</span>
+          <strong>{duplicateHints.length}</strong>
+        </div>
+        {duplicateHints.length > 0 ? (
+          <div className="duplicate-list">
+            {duplicateHints.slice(0, 4).map((hint) => (
+              <article key={hint.material.id} className="duplicate-item">
+                <strong>{hint.material.title}</strong>
+                <span>{hint.reasons.map(getDuplicateReasonLabel).join(" / ")}</span>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>暂未发现明显重复。</p>
+        )}
+      </section>
+
       <label className="switch-row">
         <input
           type="checkbox"
           checked={material.reviewEnabled}
-          disabled={!qualityReport.reviewAllowed}
+          disabled={!qualityReport.reviewAllowed || material.status !== "active"}
           onChange={(event) => onChange({ reviewEnabled: event.target.checked })}
         />
-        <span>{qualityReport.reviewAllowed ? "加入复习" : "质量达标后可加入复习"}</span>
+        <span>{getReviewToggleLabel(material, qualityReport.reviewAllowed)}</span>
       </label>
 
       <button
         type="button"
         className="review-start-button"
         onClick={onStartReview}
-        disabled={!material.reviewEnabled || !qualityReport.reviewAllowed}
+        disabled={!material.reviewEnabled || !qualityReport.reviewAllowed || material.status !== "active"}
       >
         开始复习这条
       </button>
@@ -230,11 +262,43 @@ function getWorkbenchStepLabel(step: ReturnType<typeof getMaterialWorkbenchStatu
     return "先补齐分类";
   }
 
+  if (step === "intake") {
+    return "确认入库";
+  }
+
   if (step === "review") {
     return "可加入复习";
   }
 
   return "已完成";
+}
+
+function getReviewToggleLabel(material: MaterialDraft, reviewAllowed: boolean): string {
+  if (!reviewAllowed) {
+    return "质量达标后可加入复习";
+  }
+
+  if (material.status !== "active") {
+    return "确认入库后可加入复习";
+  }
+
+  return "加入复习";
+}
+
+function getDuplicateReasonLabel(reason: MaterialDuplicateHint["reasons"][number]): string {
+  if (reason === "same-title") {
+    return "标题相同";
+  }
+
+  if (reason === "same-content") {
+    return "正文相同";
+  }
+
+  if (reason === "content-overlap") {
+    return "正文重叠";
+  }
+
+  return "来源相同";
 }
 
 function getQualityLevelLabel(level: MaterialQualityLevel): string {

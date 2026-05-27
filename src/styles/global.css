@@ -3593,6 +3593,82 @@ nav button.active {
   padding-inline: 12px;
 }
 
+.workbench-mini-stats {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+.workbench-mini-stats span {
+  background: var(--surface-control);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 760;
+  min-width: 0;
+  overflow: hidden;
+  padding: 6px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duplicate-panel {
+  background: var(--surface-glass-strong);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.duplicate-panel-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.duplicate-panel-header span,
+.duplicate-item span,
+.duplicate-panel p {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.duplicate-panel-header strong,
+.duplicate-item strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.duplicate-list {
+  display: grid;
+  gap: 8px;
+}
+
+.duplicate-item {
+  border-top: 1px solid var(--line-soft);
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 8px;
+}
+
+.duplicate-item strong,
+.duplicate-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duplicate-panel p {
+  margin: 0;
+}
+
 :root[data-theme="dark"] .material-status-badge.candidate {
   background: rgba(239, 180, 170, 0.12);
   border-color: rgba(239, 180, 170, 0.24);

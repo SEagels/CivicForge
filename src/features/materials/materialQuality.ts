@@ -26,6 +26,13 @@ export interface MaterialQualityReport {
   readonly failedRequiredChecks: readonly MaterialQualityRequiredCheckId[];
 }
 
+export type MaterialDuplicateReason = "same-title" | "same-content" | "content-overlap" | "same-source";
+
+export interface MaterialDuplicateHint {
+  readonly material: MaterialDraft;
+  readonly reasons: readonly MaterialDuplicateReason[];
+}
+
 const REUSABLE_MATERIAL_TYPES = new Set([
   "solution",
   "case",
@@ -69,23 +76,47 @@ export function getPotentialDuplicateMaterials(
   material: MaterialDraft,
   materials: readonly MaterialDraft[],
 ): readonly MaterialDraft[] {
+  return getMaterialDuplicateHints(material, materials)
+    .filter((hint) => hint.reasons.some((reason) => reason !== "same-source"))
+    .map((hint) => hint.material);
+}
+
+export function getMaterialDuplicateHints(
+  material: MaterialDraft,
+  materials: readonly MaterialDraft[],
+): readonly MaterialDuplicateHint[] {
   const title = normalizeComparableText(material.title);
   const content = normalizeComparableText(material.contentMd);
+  const source = normalizeComparableText(material.source);
 
-  return materials.filter((candidate) => {
+  return materials.flatMap((candidate) => {
     if (candidate.id === material.id) {
-      return false;
+      return [];
     }
 
     const candidateTitle = normalizeComparableText(candidate.title);
     const candidateContent = normalizeComparableText(candidate.contentMd);
+    const candidateSource = normalizeComparableText(candidate.source);
+    const reasons: MaterialDuplicateReason[] = [];
 
-    return Boolean(
-      (title && candidateTitle === title) ||
-        (content && candidateContent === content) ||
-        (content.length >= 24 && candidateContent.includes(content)) ||
-        (candidateContent.length >= 24 && content.includes(candidateContent)),
-    );
+    if (title && candidateTitle === title) {
+      reasons.push("same-title");
+    }
+
+    if (content && candidateContent === content) {
+      reasons.push("same-content");
+    } else if (
+      (content.length >= 24 && candidateContent.includes(content)) ||
+      (candidateContent.length >= 24 && content.includes(candidateContent))
+    ) {
+      reasons.push("content-overlap");
+    }
+
+    if (source && candidateSource === source) {
+      reasons.push("same-source");
+    }
+
+    return reasons.length > 0 ? [{ material: candidate, reasons }] : [];
   });
 }
 

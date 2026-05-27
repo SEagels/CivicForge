@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MaterialDraft } from "./materialModel";
 import {
   getMaterialWorkbenchStatus,
+  getWorkbenchStats,
   getWorkbenchCandidates,
   isWorkbenchCandidate,
 } from "./materialWorkbench";
@@ -27,15 +28,25 @@ describe("material workbench", () => {
     });
   });
 
-  it("keeps approved but review-disabled materials in the workbench as ready to add to review", () => {
-    const ready = makeMaterial({ reviewEnabled: false });
+  it("requires explicit intake confirmation before a qualified draft can be added to review", () => {
+    const ready = makeMaterial({ status: "draft", reviewEnabled: false });
 
     expect(isWorkbenchCandidate(ready)).toBe(true);
     expect(getMaterialWorkbenchStatus(ready)).toMatchObject({
       stage: "ready",
+      primaryStep: "intake",
+      actionLabel: "确认入库",
+      reviewAllowed: true,
+    });
+  });
+
+  it("keeps confirmed but review-disabled materials ready for review", () => {
+    const ready = makeMaterial({ status: "active", reviewEnabled: false });
+
+    expect(getMaterialWorkbenchStatus(ready)).toMatchObject({
+      stage: "ready",
       primaryStep: "review",
       actionLabel: "加入复习",
-      reviewAllowed: true,
     });
   });
 
@@ -47,6 +58,25 @@ describe("material workbench", () => {
     ];
 
     expect(getWorkbenchCandidates(materials).map((material) => material.id)).toEqual(["needs-work"]);
+  });
+
+  it("summarizes the workbench queue by candidate, classification, intake, and review states", () => {
+    const materials = [
+      makeMaterial({ id: "blank", contentMd: "", excerpt: "", source: "", tagNames: [], questionTypeSlugs: ["general"], reviewEnabled: false }),
+      makeMaterial({ id: "classify", questionTypeSlugs: ["general"], reviewEnabled: false }),
+      makeMaterial({ id: "intake", status: "draft", reviewEnabled: false }),
+      makeMaterial({ id: "review", status: "active", reviewEnabled: false }),
+      makeMaterial({ id: "done", status: "active", reviewEnabled: true }),
+    ];
+
+    expect(getWorkbenchStats(materials)).toEqual({
+      total: 4,
+      candidateCount: 1,
+      classifyCount: 1,
+      intakeReadyCount: 1,
+      reviewReadyCount: 1,
+      reviewEnabledCount: 1,
+    });
   });
 });
 

@@ -86,6 +86,17 @@ describe("review scheduler", () => {
     expect(getTodayReviewCount([lowQuality, approved], NOW)).toBe(1);
   });
 
+  it("excludes unconfirmed draft materials even when they pass quality and review is enabled", () => {
+    const draft = makeMaterial("draft-ready", {
+      status: "draft",
+      reviewEnabled: true,
+      nextReviewAt: null,
+    });
+
+    expect(getDueReviewMaterials([draft], NOW)).toEqual([]);
+    expect(getTodayReviewCount([draft], NOW)).toBe(0);
+  });
+
   it("schedules again reviews soon and records a lapse", () => {
     const reviewed = applyReviewRating(
       makeMaterial("card", {
