@@ -1,13 +1,16 @@
 import { MATERIAL_TYPE_IDS, MATERIAL_STATUSES } from "../../domain/enums";
 import { normalizeMaterialState, type MaterialDraft, type MaterialState } from "../materials/materialModel";
+import { isReviewLog } from "../review/reviewPersistence";
+import type { ReviewLog } from "../review/reviewSession";
 import type { RewriteLog } from "../rewrite/rewriteWorkshop";
 import { REWRITE_TARGET_IDS } from "../rewrite/rewriteWorkshop";
 import { THEME_MODES, type AppSettings } from "../settings/appSettings";
 
-export const CIVICFORGE_ARCHIVE_VERSION = 1;
+export const CIVICFORGE_ARCHIVE_VERSION = 2;
 
 export interface CivicForgeArchiveInput {
   readonly materialsState: MaterialState;
+  readonly reviewLogs: readonly ReviewLog[];
   readonly rewriteLogs: readonly RewriteLog[];
   readonly settings: AppSettings;
 }
@@ -24,6 +27,7 @@ export function createAppArchive(input: CivicForgeArchiveInput, exportedAt: Date
     version: CIVICFORGE_ARCHIVE_VERSION,
     exportedAt: exportedAt.toISOString(),
     materialsState: input.materialsState,
+    reviewLogs: input.reviewLogs,
     rewriteLogs: input.rewriteLogs,
     settings: input.settings,
   };
@@ -35,11 +39,16 @@ export function serializeAppArchive(archive: CivicForgeArchive): string {
 
 export function parseAppArchive(raw: string): CivicForgeArchive | null {
   try {
-    const payload = JSON.parse(raw) as Partial<CivicForgeArchive>;
+    const payload = JSON.parse(raw) as Partial<Omit<CivicForgeArchive, "version" | "reviewLogs">> & {
+      readonly version?: unknown;
+      readonly reviewLogs?: unknown;
+    };
+
+    if (payload.appName !== "CivicForge" || !isSupportedArchiveVersion(payload.version)) {
+      return null;
+    }
 
     if (
-      payload.appName !== "CivicForge" ||
-      payload.version !== CIVICFORGE_ARCHIVE_VERSION ||
       typeof payload.exportedAt !== "string" ||
       !isMaterialState(payload.materialsState) ||
       !Array.isArray(payload.rewriteLogs) ||
@@ -49,17 +58,28 @@ export function parseAppArchive(raw: string): CivicForgeArchive | null {
       return null;
     }
 
+    const reviewLogs = payload.version === 1 ? [] : payload.reviewLogs;
+
+    if (!Array.isArray(reviewLogs) || !reviewLogs.every(isReviewLog)) {
+      return null;
+    }
+
     return {
       appName: "CivicForge",
       version: CIVICFORGE_ARCHIVE_VERSION,
       exportedAt: payload.exportedAt,
       materialsState: normalizeMaterialState(payload.materialsState),
+      reviewLogs,
       rewriteLogs: payload.rewriteLogs,
       settings: payload.settings,
     };
   } catch {
     return null;
   }
+}
+
+function isSupportedArchiveVersion(value: unknown): value is 1 | typeof CIVICFORGE_ARCHIVE_VERSION {
+  return value === 1 || value === CIVICFORGE_ARCHIVE_VERSION;
 }
 
 export function createArchiveFilename(now: Date = new Date()): string {

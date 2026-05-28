@@ -731,7 +731,8 @@ button:disabled {
 .review-summary {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(120px, 180px));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  max-width: 920px;
 }
 
 .review-summary div {
@@ -796,6 +797,59 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.review-stats-panel,
+.review-recall-prompt {
+  background: #fffdf9;
+  border: 1px solid #e3ddd4;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  max-width: 920px;
+  padding: 18px;
+}
+
+.review-recall-prompt {
+  background: #f7f1ea;
+  color: #292521;
+}
+
+.review-recall-prompt p {
+  line-height: 1.7;
+  margin: 0;
+}
+
+.weak-area-list {
+  display: grid;
+  gap: 10px;
+}
+
+.weak-area-item {
+  align-items: center;
+  background: #f8f4ee;
+  border: 1px solid #d8d0c5;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 12px;
+}
+
+.weak-area-item div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.review-stats-empty {
+  display: grid;
+  gap: 5px;
+}
+
+.review-stats-empty.compact {
+  padding: 4px 0;
+}
+
 .review-meta {
   display: flex;
   flex-wrap: wrap;
@@ -844,6 +898,17 @@ button:disabled {
 
 .rating-button.easy {
   border-color: #8fb7c4;
+}
+
+.rating-button:disabled,
+.reveal-answer-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
+.reveal-answer-button {
+  justify-self: start;
 }
 
 .review-empty {
@@ -1829,6 +1894,9 @@ nav button.active {
 .inspector-note span,
 .review-summary span,
 .review-card-header span,
+.review-recall-prompt span,
+.review-stats-empty span,
+.weak-area-item span,
 .review-meta span,
 .rating-button span,
 .review-empty p,
@@ -2745,6 +2813,8 @@ nav button.active {
 .title-input,
 .review-card-header h2,
 .review-content,
+.review-recall-prompt strong,
+.weak-area-item strong,
 .rating-button strong,
 .rewrite-status strong,
 .rewrite-panel-title h2,
@@ -2868,6 +2938,9 @@ nav button.active {
 .stat-grid div,
 .review-summary div,
 .review-card,
+.review-stats-panel,
+.review-recall-prompt,
+.weak-area-item,
 .rating-button,
 .rewrite-panel,
 .rewrite-metrics div,

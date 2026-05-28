@@ -9,6 +9,19 @@ describe("SQLite schema", () => {
     }
   });
 
+  it("extends review logs for active recall statistics", () => {
+    const migration = DATABASE_MIGRATIONS.find((item) => item.version === 3);
+
+    expect(migration).toMatchObject({ version: 3, name: "review_log_active_recall" });
+    expect(migration?.sql).toContain("ALTER TABLE review_logs ADD COLUMN uuid");
+    expect(migration?.sql).toContain("review_mode TEXT NOT NULL DEFAULT 'active-recall'");
+    expect(migration?.sql).toContain("topic_slug TEXT NOT NULL DEFAULT ''");
+    expect(migration?.sql).toContain("question_type_slugs TEXT NOT NULL DEFAULT ''");
+    expect(migration?.sql).toContain("material_type TEXT NOT NULL DEFAULT ''");
+    expect(migration?.sql).toContain("answer_revealed_at TEXT NULL");
+    expect(migration?.sql).toContain("idx_review_logs_mode_time");
+  });
+
   it("defines the FTS5 search table and synchronization triggers", () => {
     expect(INITIAL_SCHEMA_SQL).toContain("CREATE VIRTUAL TABLE IF NOT EXISTS materials_fts USING fts5");
     expect(INITIAL_SCHEMA_SQL).toContain("materials_ai");
@@ -24,7 +37,7 @@ describe("SQLite schema", () => {
   });
 
   it("registers migrations with stable versions", () => {
-    expect(DATABASE_MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2]);
+    expect(DATABASE_MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3]);
     expect(DATABASE_MIGRATIONS[0]).toMatchObject({
       version: 1,
       name: "initial_schema",
@@ -35,5 +48,9 @@ describe("SQLite schema", () => {
       name: "rewrite_log_uuid",
     });
     expect(DATABASE_MIGRATIONS[1].sql).toContain("ALTER TABLE rewrite_logs ADD COLUMN uuid");
+    expect(DATABASE_MIGRATIONS[2]).toMatchObject({
+      version: 3,
+      name: "review_log_active_recall",
+    });
   });
 });
