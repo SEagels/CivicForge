@@ -153,7 +153,6 @@ CREATE INDEX IF NOT EXISTS idx_review_logs_rating ON review_logs(rating);
 
 CREATE TABLE IF NOT EXISTS rewrite_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  uuid TEXT NOT NULL UNIQUE,
   source_material_id INTEGER NULL REFERENCES materials(id) ON UPDATE CASCADE ON DELETE SET NULL,
   target_material_id INTEGER NULL REFERENCES materials(id) ON UPDATE CASCADE ON DELETE SET NULL,
   original_text TEXT NOT NULL,
@@ -175,7 +174,6 @@ CREATE TABLE IF NOT EXISTS rewrite_logs (
   updated_at TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_rewrite_logs_uuid ON rewrite_logs(uuid);
 CREATE INDEX IF NOT EXISTS idx_rewrite_source_material ON rewrite_logs(source_material_id);
 CREATE INDEX IF NOT EXISTS idx_rewrite_target_material ON rewrite_logs(target_material_id);
 CREATE INDEX IF NOT EXISTS idx_rewrite_target_type ON rewrite_logs(target_type);

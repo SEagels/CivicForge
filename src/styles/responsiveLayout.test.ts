@@ -50,4 +50,15 @@ describe("responsive desktop layout CSS", () => {
     expect(css).toMatch(/@media \(max-width: 980px\)[\s\S]*\.answer-layout\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
     expect(css).toMatch(/\.answer-slot-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 220px\), 1fr\)\)/s);
   });
+
+  it("keeps the structured answer workbench usable without horizontal crowding", () => {
+    expect(css).toMatch(/\.answer-layout\s*\{[\s\S]*grid-template-columns:\s*minmax\(320px, 0\.82fr\) minmax\(500px, 1\.18fr\)/s);
+    expect(css).toMatch(/@media \(max-width: 1120px\)[\s\S]*\.answer-layout\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
+    expect(css).toMatch(/\.answer-side-column\s*\{[\s\S]*position:\s*sticky/s);
+    expect(css).toMatch(/\.answer-draft-actions \.primary-button,[\s\S]*\.answer-draft-actions \.ghost-button\s*\{[\s\S]*flex:\s*1 1 142px/s);
+    expect(css).toMatch(/\.answer-section-title\s*\{[\s\S]*flex-wrap:\s*wrap/s);
+    expect(css).toMatch(/\.callable-card-header\s*\{[\s\S]*flex-wrap:\s*wrap/s);
+    expect(css).toMatch(/\.callable-group-header\s*\{[\s\S]*flex-wrap:\s*wrap/s);
+    expect(css).toMatch(/@media \(max-width: 1120px\)[\s\S]*\.answer-side-column\s*\{[\s\S]*position:\s*static/s);
+  });
 });

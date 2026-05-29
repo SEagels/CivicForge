@@ -8,6 +8,9 @@ import {
 } from "../materials/materialModel";
 import { getBrowserMaterialStorage, loadMaterialState, saveMaterialState } from "../materials/materialPersistence";
 import { createMaterialRepository, type MaterialRepository } from "../materials/materialRepository";
+import { getBrowserReviewStorage, loadReviewLogs, saveReviewLogs } from "../review/reviewPersistence";
+import { createReviewLogRepository, type ReviewLogRepository } from "../review/reviewLogRepository";
+import type { ReviewLog } from "../review/reviewSession";
 import { getBrowserRewriteStorage, loadRewriteLogs, saveRewriteLogs } from "../rewrite/rewritePersistence";
 import { createRewriteLogRepository, type RewriteLogRepository } from "../rewrite/rewriteLogRepository";
 import type { RewriteLog } from "../rewrite/rewriteWorkshop";
@@ -24,6 +27,7 @@ export type StorageMode = "SQLite" | "Preview localStorage";
 
 export interface AppDataSnapshot {
   readonly materialsState: MaterialState;
+  readonly reviewLogs: readonly ReviewLog[];
   readonly rewriteLogs: readonly RewriteLog[];
   readonly settings: AppSettings;
   readonly storageMode: StorageMode;
@@ -34,6 +38,7 @@ export type AppDataRestoreSnapshot = Omit<AppDataSnapshot, "storageMode">;
 export interface AppDataService {
   load(): Promise<AppDataSnapshot>;
   saveMaterials(state: MaterialState): Promise<void>;
+  saveReviewLogs(logs: readonly ReviewLog[]): Promise<void>;
   saveRewriteLogs(logs: readonly RewriteLog[]): Promise<void>;
   saveSettings(settings: AppSettings): Promise<void>;
   restore(snapshot: AppDataRestoreSnapshot): Promise<void>;
@@ -42,11 +47,13 @@ export interface AppDataService {
 interface AppDataServiceOptions {
   readonly initialMaterialState?: MaterialState;
   readonly materialStorage?: Storage | null;
+  readonly reviewStorage?: Storage | null;
   readonly rewriteStorage?: Storage | null;
   readonly settingsStorage?: Storage | null;
   readonly loadDatabase?: () => Promise<CivicForgeDatabase | null>;
   readonly initializeDatabase?: (db: CivicForgeDatabase) => Promise<void>;
   readonly createMaterialRepository?: (db: CivicForgeDatabase) => MaterialRepository;
+  readonly createReviewLogRepository?: (db: CivicForgeDatabase) => ReviewLogRepository;
   readonly createRewriteLogRepository?: (db: CivicForgeDatabase) => RewriteLogRepository;
   readonly createSettingsRepository?: (db: CivicForgeDatabase) => SettingsRepository;
 }
@@ -54,16 +61,19 @@ interface AppDataServiceOptions {
 export function createAppDataService(options: AppDataServiceOptions = {}): AppDataService {
   const initialMaterialState = options.initialMaterialState ?? createInitialMaterialState();
   const materialStorage = options.materialStorage === undefined ? getBrowserMaterialStorage() : options.materialStorage;
+  const reviewStorage = options.reviewStorage === undefined ? getBrowserReviewStorage() : options.reviewStorage;
   const rewriteStorage = options.rewriteStorage === undefined ? getBrowserRewriteStorage() : options.rewriteStorage;
   const settingsStorage = options.settingsStorage === undefined ? getBrowserSettingsStorage() : options.settingsStorage;
   const loadDatabase = options.loadDatabase ?? loadCivicForgeDatabase;
   const initializeDatabase = options.initializeDatabase ?? initializeCivicForgeDatabase;
   const materialRepositoryFactory = options.createMaterialRepository ?? createMaterialRepository;
+  const reviewLogRepositoryFactory = options.createReviewLogRepository ?? createReviewLogRepository;
   const rewriteLogRepositoryFactory = options.createRewriteLogRepository ?? createRewriteLogRepository;
   const settingsRepositoryFactory = options.createSettingsRepository ?? createSettingsRepository;
 
   let storageMode: StorageMode = "Preview localStorage";
   let materialRepository: MaterialRepository | null = null;
+  let reviewLogRepository: ReviewLogRepository | null = null;
   let rewriteLogRepository: RewriteLogRepository | null = null;
   let settingsRepository: SettingsRepository | null = null;
 
@@ -71,6 +81,7 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
     const fallbackMaterialsState = materialStorage
       ? loadMaterialState(materialStorage) ?? initialMaterialState
       : initialMaterialState;
+    const fallbackReviewLogs = reviewStorage ? loadReviewLogs(reviewStorage) : [];
     const fallbackRewriteLogs = rewriteStorage ? loadRewriteLogs(rewriteStorage) : [];
     const fallbackSettings = settingsStorage ? loadAppSettings(settingsStorage) : DEFAULT_APP_SETTINGS;
 
@@ -81,6 +92,7 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
         storageMode = "Preview localStorage";
         return {
           materialsState: fallbackMaterialsState,
+          reviewLogs: fallbackReviewLogs,
           rewriteLogs: fallbackRewriteLogs,
           settings: fallbackSettings,
           storageMode,
@@ -89,6 +101,7 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
 
       await initializeDatabase(db);
       materialRepository = materialRepositoryFactory(db);
+      reviewLogRepository = reviewLogRepositoryFactory(db);
       rewriteLogRepository = rewriteLogRepositoryFactory(db);
       settingsRepository = settingsRepositoryFactory(db);
       storageMode = "SQLite";
@@ -99,6 +112,13 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
 
       if (sqliteMaterials.length === 0) {
         await saveMaterialsToRepository(materialRepository, fallbackMaterialsState);
+      }
+
+      const sqliteReviewLogs = await reviewLogRepository.listReviewLogs();
+      const reviewLogs = sqliteReviewLogs.length > 0 ? sqliteReviewLogs : fallbackReviewLogs;
+
+      if (sqliteReviewLogs.length === 0 && fallbackReviewLogs.length > 0) {
+        await reviewLogRepository.replaceReviewLogs(fallbackReviewLogs);
       }
 
       const sqliteRewriteLogs = await rewriteLogRepository.listRewriteLogs();
@@ -112,6 +132,7 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
 
       return {
         materialsState,
+        reviewLogs,
         rewriteLogs,
         settings,
         storageMode,
@@ -119,12 +140,14 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
     } catch (error) {
       console.warn("Unable to initialize CivicForge SQLite storage; falling back to preview persistence.", error);
       materialRepository = null;
+      reviewLogRepository = null;
       rewriteLogRepository = null;
       settingsRepository = null;
       storageMode = "Preview localStorage";
 
       return {
         materialsState: fallbackMaterialsState,
+        reviewLogs: fallbackReviewLogs,
         rewriteLogs: fallbackRewriteLogs,
         settings: fallbackSettings,
         storageMode,
@@ -152,6 +175,16 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
     }
   }
 
+  async function saveReviewLogsToService(logs: readonly ReviewLog[]): Promise<void> {
+    if (reviewStorage) {
+      saveReviewLogs(reviewStorage, logs);
+    }
+
+    if (reviewLogRepository) {
+      await reviewLogRepository.replaceReviewLogs(logs);
+    }
+  }
+
   async function saveSettingsToService(settings: AppSettings): Promise<void> {
     if (settingsStorage) {
       saveAppSettings(settingsStorage, settings);
@@ -164,6 +197,7 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
 
   async function restore(snapshot: AppDataRestoreSnapshot): Promise<void> {
     await saveMaterials(snapshot.materialsState);
+    await saveReviewLogsToService(snapshot.reviewLogs);
     await saveRewriteLogs(snapshot.rewriteLogs);
     await saveSettingsToService(snapshot.settings);
   }
@@ -171,6 +205,7 @@ export function createAppDataService(options: AppDataServiceOptions = {}): AppDa
   return {
     load,
     saveMaterials,
+    saveReviewLogs: saveReviewLogsToService,
     saveRewriteLogs,
     saveSettings: saveSettingsToService,
     restore,

@@ -14,6 +14,8 @@ import {
   serializeAppArchive,
 } from "../importExport/appArchive";
 import { ImportExportPanel } from "../importExport/ImportExportPanel";
+import { applyReviewRating, readReviewSchedule } from "../review/reviewScheduler";
+import { buildReviewLogEntry, type CompletedReviewSessionState, type ReviewLog } from "../review/reviewSession";
 import { ReviewPanel } from "../review/ReviewPanel";
 import { RewritePanel } from "../rewrite/RewritePanel";
 import { buildMaterialInputFromRewrite, type RewriteLog, type RewriteMaterialInput } from "../rewrite/rewriteWorkshop";
@@ -70,6 +72,7 @@ export function MaterialLibrary() {
   const [answerRewriteDraft, setAnswerRewriteDraft] = useState<AnswerRewriteDraft | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>(STORAGE_MODE_PREVIEW);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
+  const [reviewLogs, setReviewLogs] = useState<readonly ReviewLog[]>([]);
   const [rewriteLogs, setRewriteLogs] = useState<readonly RewriteLog[]>([]);
   const [materialSaveStatus, setMaterialSaveStatus] = useState<MaterialSaveStatus>({ kind: "loading" });
   const dataServiceRef = useRef<AppDataService | null>(null);
@@ -96,11 +99,12 @@ export function MaterialLibrary() {
       serializeAppArchive(
         createAppArchive({
           materialsState: state,
+          reviewLogs,
           rewriteLogs,
           settings,
         }),
       ),
-    [rewriteLogs, settings, state],
+    [reviewLogs, rewriteLogs, settings, state],
   );
 
   useEffect(() => {
@@ -116,6 +120,7 @@ export function MaterialLibrary() {
       }
 
       setState(snapshot.materialsState);
+      setReviewLogs(snapshot.reviewLogs);
       setRewriteLogs(snapshot.rewriteLogs);
       setSettings(snapshot.settings);
       setStorageMode(snapshot.storageMode);
@@ -152,6 +157,16 @@ export function MaterialLibrary() {
         }
       });
   }, [state]);
+
+  useEffect(() => {
+    if (!hydratedRef.current) {
+      return;
+    }
+
+    void dataServiceRef.current?.saveReviewLogs(reviewLogs).catch((error) => {
+      console.warn("Unable to save CivicForge review logs.", error);
+    });
+  }, [reviewLogs]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -257,10 +272,22 @@ export function MaterialLibrary() {
     setState((current) => confirmSelectedMaterial(current));
   }, []);
 
-  const rateMaterial = useCallback((materialId: string, rating: ReviewRating) => {
-    setReviewFocusId(null);
-    setState((current) => reviewMaterial(current, materialId, rating));
-  }, []);
+  const rateMaterial = useCallback(
+    (materialId: string, rating: ReviewRating, session: CompletedReviewSessionState) => {
+      const previousMaterial = state.materials.find((material) => material.id === materialId);
+      const reviewedAt = new Date(session.completedAt);
+      const nextMaterial = previousMaterial ? applyReviewRating(previousMaterial, rating, reviewedAt) : null;
+
+      setReviewFocusId(null);
+      setState((current) => reviewMaterial(current, materialId, rating, reviewedAt));
+
+      if (previousMaterial && nextMaterial) {
+        const log = buildReviewLogEntry(previousMaterial, readReviewSchedule(previousMaterial), nextMaterial, session);
+        setReviewLogs((current) => [log, ...current.filter((item) => item.id !== log.id)]);
+      }
+    },
+    [state.materials],
+  );
 
   const saveRewriteLog = useCallback((log: RewriteLog) => {
     setRewriteLogs((current) => [log, ...current.filter((item) => item.id !== log.id)]);
@@ -310,6 +337,7 @@ export function MaterialLibrary() {
     }
 
     setState(archive.materialsState);
+    setReviewLogs(archive.reviewLogs);
     setRewriteLogs(archive.rewriteLogs);
     setSettings(archive.settings);
     setFilters(DEFAULT_MATERIAL_FILTERS);
@@ -441,6 +469,7 @@ export function MaterialLibrary() {
       ) : view === "review" ? (
         <ReviewPanel
           materials={activeMaterials}
+          reviewLogs={reviewLogs}
           focusedMaterialId={reviewFocusId}
           onRate={rateMaterial}
           onBackToLibrary={openLibrary}

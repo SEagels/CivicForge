@@ -256,6 +256,28 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial, onSendT
             </div>
           </section>
 
+          <section className="answer-preview-card answer-draft-card">
+            <div className="answer-section-title compact">
+              <div>
+                <p className="eyebrow">Markdown</p>
+                <h2>汇总预览</h2>
+              </div>
+              <span>{renderedMarkdown.trim().length} 字</span>
+            </div>
+            <pre>{renderedMarkdown || "选择槽位并插入素材后，这里会生成可复制的 Markdown 汇总。"}</pre>
+            <div className="answer-draft-actions">
+              <button type="button" className="ghost-button" onClick={copyDraft} disabled={!canUseDraft}>
+                {copyState === "copied" ? "已复制" : copyState === "failed" ? "复制失败" : "复制全文"}
+              </button>
+              <button type="button" className="ghost-button" onClick={sendToRewrite} disabled={!canUseDraft}>
+                送去 Rewrite 打磨
+              </button>
+              <button type="button" className="primary-button" onClick={saveDraft} disabled={!canUseDraft}>
+                保存为新素材
+              </button>
+            </div>
+          </section>
+
           <section className="answer-template-card">
             <div className="answer-section-title compact">
               <div>
@@ -283,28 +305,6 @@ export function AnswerWorkbenchPanel({ materials, onSaveDraftAsMaterial, onSendT
                 ))}
               </div>
             )}
-          </section>
-
-          <section className="answer-preview-card answer-draft-card">
-            <div className="answer-section-title compact">
-              <div>
-                <p className="eyebrow">Markdown</p>
-                <h2>汇总预览</h2>
-              </div>
-              <span>{renderedMarkdown.trim().length} 字</span>
-            </div>
-            <pre>{renderedMarkdown || "选择槽位并插入素材后，这里会生成可复制的 Markdown 汇总。"}</pre>
-            <div className="answer-draft-actions">
-              <button type="button" className="ghost-button" onClick={copyDraft} disabled={!canUseDraft}>
-                {copyState === "copied" ? "已复制" : copyState === "failed" ? "复制失败" : "复制全文"}
-              </button>
-              <button type="button" className="ghost-button" onClick={sendToRewrite} disabled={!canUseDraft}>
-                送去 Rewrite 打磨
-              </button>
-              <button type="button" className="primary-button" onClick={saveDraft} disabled={!canUseDraft}>
-                保存为新素材
-              </button>
-            </div>
           </section>
         </aside>
       </div>
