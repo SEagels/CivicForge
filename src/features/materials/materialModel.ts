@@ -271,6 +271,28 @@ export function archiveSelectedMaterial(state: MaterialState): MaterialState {
   };
 }
 
+export function confirmSelectedMaterialAndEnableReview(state: MaterialState): MaterialState {
+  if (!state.selectedId) {
+    return state;
+  }
+
+  return {
+    ...state,
+    materials: state.materials.map((material) => {
+      if (material.id !== state.selectedId || material.status !== "draft" || !canMaterialEnterReview(material)) {
+        return material;
+      }
+
+      return {
+        ...material,
+        status: "active" as const,
+        reviewEnabled: true,
+        updatedAt: nowIso(),
+      };
+    }),
+  };
+}
+
 export function reviewMaterial(
   state: MaterialState,
   materialId: string,

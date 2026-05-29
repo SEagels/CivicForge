@@ -3894,6 +3894,128 @@ nav button.active {
   margin: 0;
 }
 
+.intake-assistant-panel {
+  gap: 12px;
+}
+
+.intake-assistant-header {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.intake-assistant-header > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.intake-stage-chip {
+  background: var(--surface-control);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 6px 9px;
+}
+
+.intake-stage-chip.ready,
+.intake-stage-chip.done {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-strong);
+}
+
+.intake-checklist {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
+  min-width: 0;
+}
+
+.intake-check {
+  align-items: center;
+  background: var(--surface-control);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 6px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intake-check strong {
+  border-radius: 999px;
+  color: inherit;
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.intake-check.passed {
+  background: rgba(59, 126, 112, 0.1);
+  border-color: rgba(59, 126, 112, 0.2);
+  color: var(--accent-strong);
+}
+
+.intake-check.missing {
+  background: rgba(190, 139, 40, 0.1);
+  border-color: rgba(190, 139, 40, 0.22);
+  color: #846018;
+}
+
+.intake-suggestion-list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.intake-suggestion-item {
+  background: var(--surface-control);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.intake-suggestion-item span,
+.intake-suggestion-item small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.intake-suggestion-item strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.intake-assistant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.intake-assistant-actions .primary-button,
+.intake-assistant-actions .ghost-button {
+  flex: 1 1 118px;
+  min-width: 0;
+}
+
 .duplicate-expand-button {
   justify-self: start;
 }

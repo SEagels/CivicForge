@@ -24,6 +24,7 @@ import { SettingsPanel } from "../settings/SettingsPanel";
 import { TaxonomyPanel } from "../taxonomy/TaxonomyPanel";
 import { MaterialInspector } from "./MaterialInspector";
 import { MaterialList } from "./MaterialList";
+import { getNextIntakeMaterialId } from "./intakeAssistant";
 import {
   DEFAULT_MATERIAL_FILTERS,
   filterMaterials,
@@ -34,6 +35,7 @@ import {
 import {
   archiveSelectedMaterial,
   confirmSelectedMaterial,
+  confirmSelectedMaterialAndEnableReview,
   createInitialMaterialState,
   createMaterial,
   createMaterialFromAnswerDraft,
@@ -94,6 +96,10 @@ export function MaterialLibrary() {
     [activeMaterials, selectedMaterial],
   );
   const filtersActive = hasActiveFilters(filters);
+  const nextIntakeMaterialId = useMemo(
+    () => getNextIntakeMaterialId(activeMaterials, state.selectedId),
+    [activeMaterials, state.selectedId],
+  );
   const archiveJson = useMemo(
     () =>
       serializeAppArchive(
@@ -270,6 +276,17 @@ export function MaterialLibrary() {
 
   const confirmSelected = useCallback(() => {
     setState((current) => confirmSelectedMaterial(current));
+  }, []);
+
+  const confirmSelectedAndEnableReview = useCallback(() => {
+    setState((current) => confirmSelectedMaterialAndEnableReview(current));
+  }, []);
+
+  const selectNextIntakeMaterial = useCallback(() => {
+    setState((current) => {
+      const nextId = getNextIntakeMaterialId(getActiveMaterials(current), current.selectedId);
+      return nextId ? selectMaterial(current, nextId) : current;
+    });
   }, []);
 
   const rateMaterial = useCallback(
@@ -455,8 +472,11 @@ export function MaterialLibrary() {
             onChange={updateSelected}
             onArchive={() => setState((current) => archiveSelectedMaterial(current))}
             onConfirm={confirmSelected}
+            onConfirmAndEnableReview={confirmSelectedAndEnableReview}
             onStartReview={startSelectedReview}
             onStartRewrite={startSelectedRewrite}
+            onSelectNextIntakeMaterial={selectNextIntakeMaterial}
+            hasNextIntakeMaterial={Boolean(nextIntakeMaterialId)}
             onResetExamples={resetExampleMaterials}
           />
         </>

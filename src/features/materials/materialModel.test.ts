@@ -4,6 +4,7 @@ import {
   createInitialMaterialState,
   createMaterial,
   createMaterialFromAnswerDraft,
+  confirmSelectedMaterialAndEnableReview,
   confirmSelectedMaterial,
   createMaterialFromSource,
   createMaterialFromRewrite,
@@ -144,6 +145,41 @@ describe("material model", () => {
     expect(selected).toMatchObject({
       status: "active",
       reviewEnabled: true,
+    });
+  });
+
+  it("confirms a qualified draft and enables review in one intake action", () => {
+    const draft = updateSelectedMaterial(createMaterial(createInitialMaterialState()), {
+      title: "基层治理：网格化服务",
+      contentMd: "推动治理资源下沉网格，把服务触角延伸到群众身边，提升基层治理效能。",
+      excerpt: "治理资源下沉网格，服务触角前移。",
+      source: "政策材料",
+      tagNames: ["网格化", "基层服务"],
+      questionTypeSlugs: ["implementation", "essay"],
+    });
+    const confirmed = confirmSelectedMaterialAndEnableReview(draft);
+    const selected = confirmed.materials.find((material) => material.id === confirmed.selectedId);
+
+    expect(selected).toMatchObject({
+      status: "active",
+      reviewEnabled: true,
+    });
+  });
+
+  it("does not confirm and enable review for a low quality draft", () => {
+    const draft = updateSelectedMaterial(createMaterial(createInitialMaterialState()), {
+      title: "未命名素材",
+      contentMd: "",
+      source: "",
+      tagNames: [],
+      questionTypeSlugs: ["general"],
+    });
+    const confirmed = confirmSelectedMaterialAndEnableReview(draft);
+    const selected = confirmed.materials.find((material) => material.id === confirmed.selectedId);
+
+    expect(selected).toMatchObject({
+      status: "draft",
+      reviewEnabled: false,
     });
   });
 

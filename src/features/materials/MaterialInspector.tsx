@@ -8,6 +8,13 @@ import {
   type MaterialQualityLevel,
 } from "./materialQuality";
 import { getMaterialWorkbenchStatus } from "./materialWorkbench";
+import {
+  buildIntakeChecklist,
+  buildPatchFromIntakeSuggestion,
+  suggestIntakeMetadata,
+  type IntakeChecklistItem,
+  type IntakeSuggestion,
+} from "./intakeAssistant";
 
 interface MaterialInspectorProps {
   readonly material: MaterialDraft | null;
@@ -15,8 +22,11 @@ interface MaterialInspectorProps {
   readonly onChange: (patch: MaterialPatch) => void;
   readonly onArchive: () => void;
   readonly onConfirm: () => void;
+  readonly onConfirmAndEnableReview: () => void;
   readonly onStartReview: () => void;
   readonly onStartRewrite: () => void;
+  readonly onSelectNextIntakeMaterial: () => void;
+  readonly hasNextIntakeMaterial: boolean;
   readonly onResetExamples: () => void;
 }
 
@@ -26,8 +36,11 @@ export function MaterialInspector({
   onChange,
   onArchive,
   onConfirm,
+  onConfirmAndEnableReview,
   onStartReview,
   onStartRewrite,
+  onSelectNextIntakeMaterial,
+  hasNextIntakeMaterial,
   onResetExamples,
 }: MaterialInspectorProps) {
   const [duplicatesExpanded, setDuplicatesExpanded] = useState(false);
@@ -50,6 +63,11 @@ export function MaterialInspector({
   const qualityLabel = getQualityLevelLabel(qualityReport.level);
   const failedQualityLabels = qualityReport.checks.filter((check) => !check.passed).map((check) => check.label);
   const visibleDuplicateHints = duplicatesExpanded ? duplicateHints : duplicateHints.slice(0, 3);
+  const intakeChecklist = buildIntakeChecklist(material);
+  const suggestionSet = suggestIntakeMetadata(material);
+  const suggestionPatch = buildPatchFromIntakeSuggestion(material, suggestionSet);
+  const canApplySuggestions = Object.keys(suggestionPatch).length > 0;
+  const canConfirmAndEnableReview = material.status === "draft" && qualityReport.reviewAllowed;
 
   return (
     <aside className="inspector" aria-label="属性面板">
@@ -63,25 +81,44 @@ export function MaterialInspector({
         </button>
       </div>
 
-      <section className={`next-action-panel ${workbenchStatus.stage}`} aria-label="下一步动作">
-        <div>
-          <span>下一步</span>
-          <strong>{workbenchStatus.actionLabel}</strong>
-          <small>{getWorkbenchStepLabel(workbenchStatus.primaryStep)}</small>
+      <section className={`next-action-panel intake-assistant-panel ${workbenchStatus.stage}`} aria-label="入库助手">
+        <div className="intake-assistant-header">
+          <div>
+            <span>入库助手</span>
+            <strong>{workbenchStatus.actionLabel}</strong>
+            <small>{getWorkbenchStepLabel(workbenchStatus.primaryStep)}</small>
+          </div>
+          <span className={`intake-stage-chip ${workbenchStatus.stage}`}>{getIntakeStageLabel(workbenchStatus.stage)}</span>
         </div>
-        {workbenchStatus.failedCheckLabels.length > 0 ? (
-          <ul>
-            {workbenchStatus.failedCheckLabels.map((label) => (
-              <li key={label}>{label}</li>
+
+        <div className="intake-checklist" aria-label="入库必填检查">
+          {intakeChecklist.map((item) => (
+            <IntakeChecklistBadge key={item.id} item={item} />
+          ))}
+        </div>
+
+        {suggestionSet.suggestions.length > 0 ? (
+          <div className="intake-suggestion-list" aria-label="本地规则建议">
+            {suggestionSet.suggestions.map((suggestion) => (
+              <IntakeSuggestionLine key={`${suggestion.field}:${suggestion.valueLabel}`} suggestion={suggestion} />
             ))}
-          </ul>
+          </div>
         ) : (
           <p>{getNextActionDescription(workbenchStatus.primaryStep)}</p>
         )}
-        <div className="workbench-actions">
+
+        <div className="workbench-actions intake-assistant-actions">
+          <button type="button" className="ghost-button" onClick={() => onChange(suggestionPatch)} disabled={!canApplySuggestions}>
+            应用建议
+          </button>
           {workbenchStatus.primaryStep === "intake" ? (
             <button type="button" className="primary-button" onClick={onConfirm}>
               确认入库
+            </button>
+          ) : null}
+          {canConfirmAndEnableReview ? (
+            <button type="button" className="primary-button" onClick={onConfirmAndEnableReview}>
+              确认入库并加入复习
             </button>
           ) : null}
           {workbenchStatus.primaryStep === "review" ? (
@@ -98,6 +135,14 @@ export function MaterialInspector({
               开始复习
             </button>
           )}
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={onSelectNextIntakeMaterial}
+            disabled={!hasNextIntakeMaterial}
+          >
+            处理下一条
+          </button>
         </div>
       </section>
 
@@ -270,6 +315,25 @@ export function MaterialInspector({
   );
 }
 
+function IntakeChecklistBadge({ item }: { readonly item: IntakeChecklistItem }) {
+  return (
+    <span className={item.passed ? "intake-check passed" : "intake-check missing"}>
+      <strong>{item.passed ? "通过" : "待补"}</strong>
+      {item.label}
+    </span>
+  );
+}
+
+function IntakeSuggestionLine({ suggestion }: { readonly suggestion: IntakeSuggestion }) {
+  return (
+    <div className="intake-suggestion-item">
+      <span>{suggestion.label}</span>
+      <strong>{suggestion.valueLabel}</strong>
+      <small>{suggestion.reason}</small>
+    </div>
+  );
+}
+
 function getWorkbenchStepLabel(step: ReturnType<typeof getMaterialWorkbenchStatus>["primaryStep"]): string {
   if (step === "rewrite") {
     return "先打磨正文";
@@ -304,6 +368,22 @@ function getNextActionDescription(step: ReturnType<typeof getMaterialWorkbenchSt
   }
 
   return "先补齐质量缺口，再确认入库和加入复习。";
+}
+
+function getIntakeStageLabel(stage: ReturnType<typeof getMaterialWorkbenchStatus>["stage"]): string {
+  if (stage === "candidate") {
+    return "候选";
+  }
+
+  if (stage === "refining") {
+    return "待打磨";
+  }
+
+  if (stage === "ready") {
+    return "可入库";
+  }
+
+  return "已入复习";
 }
 
 function getReviewToggleLabel(material: MaterialDraft, reviewAllowed: boolean): string {

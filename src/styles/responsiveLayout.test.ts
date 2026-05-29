@@ -61,4 +61,13 @@ describe("responsive desktop layout CSS", () => {
     expect(css).toMatch(/\.callable-group-header\s*\{[\s\S]*flex-wrap:\s*wrap/s);
     expect(css).toMatch(/@media \(max-width: 1120px\)[\s\S]*\.answer-side-column\s*\{[\s\S]*position:\s*static/s);
   });
+
+  it("defines responsive styles for the single-material intake assistant", () => {
+    expect(css).toContain(".intake-assistant-panel");
+    expect(css).toContain(".intake-checklist");
+    expect(css).toContain(".intake-suggestion-list");
+    expect(css).toContain(".intake-assistant-actions");
+    expect(css).toMatch(/\.intake-assistant-actions\s*\{[\s\S]*flex-wrap:\s*wrap/s);
+    expect(css).toMatch(/\.intake-checklist\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 132px\), 1fr\)\)/s);
+  });
 });
