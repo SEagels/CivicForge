@@ -3930,7 +3930,8 @@ nav button.active {
   gap: 18px;
   grid-column: 2 / -1;
   min-width: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 30px 34px;
 }
 
@@ -3998,9 +3999,10 @@ nav button.active {
 }
 
 .answer-layout {
+  align-items: start;
   display: grid;
   gap: 16px;
-  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  grid-template-columns: minmax(320px, 0.82fr) minmax(500px, 1.18fr);
   min-width: 0;
 }
 
@@ -4018,13 +4020,24 @@ nav button.active {
 
 .answer-side-column {
   align-content: start;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding-right: 2px;
+  position: sticky;
+  scrollbar-gutter: stable;
+  top: 12px;
 }
 
 .answer-section-title {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   justify-content: space-between;
+  min-width: 0;
+}
+
+.answer-section-title > div {
   min-width: 0;
 }
 
@@ -4036,6 +4049,7 @@ nav button.active {
   color: var(--text-primary);
   font-size: 20px;
   line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .answer-section-title > span {
@@ -4077,8 +4091,15 @@ nav button.active {
 .callable-group-header {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: space-between;
   min-width: 0;
+}
+
+.callable-group-header strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .callable-group-header strong,
@@ -4129,6 +4150,7 @@ nav button.active {
 .callable-card-header {
   align-items: flex-start;
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: space-between;
   min-width: 0;
@@ -4201,7 +4223,8 @@ nav button.active {
 
 .answer-slot-card textarea {
   line-height: 1.65;
-  min-height: 120px;
+  max-width: 100%;
+  min-height: 96px;
   padding: 11px;
   resize: vertical;
 }
@@ -4282,7 +4305,9 @@ nav button.active {
 
 .answer-draft-actions .primary-button,
 .answer-draft-actions .ghost-button {
+  flex: 1 1 142px;
   min-width: 112px;
+  text-align: center;
 }
 
 .empty-list.compact {
@@ -4292,6 +4317,19 @@ nav button.active {
 @media (max-width: 1180px) {
   .answer-workbench {
     padding: 28px clamp(18px, 2.8vw, 34px);
+  }
+}
+
+@media (max-width: 1120px) {
+  .answer-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .answer-side-column {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    position: static;
   }
 }
 
