@@ -10,8 +10,8 @@ describe("responsive desktop layout CSS", () => {
 
   it("defines narrower layout breakpoints for constrained windows", () => {
     expect(css).toContain("@media (max-width: 1120px)");
-    expect(css).toContain("@media (max-width: 760px)");
-    expect(css).toMatch(/@media \(max-width: 760px\)[\s\S]*\.desktop-shell\s*\{[\s\S]*grid-template-columns:\s*1fr/s);
+    expect(css).toContain("@media (max-width: 680px)");
+    expect(css).toMatch(/@media \(max-width: 680px\)[\s\S]*\.desktop-shell\s*\{[\s\S]*grid-template-columns:\s*1fr/s);
     expect(css).toContain("@media (max-width: 980px)");
     expect(css).toMatch(/@media \(max-width: 980px\)[\s\S]*\.inspector\s*\{[\s\S]*grid-column:\s*2 \/ -1/s);
   });

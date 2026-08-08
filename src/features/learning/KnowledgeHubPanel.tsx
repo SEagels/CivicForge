@@ -2,8 +2,19 @@ import { useEffect, useState } from "react";
 import type {
   KnowledgeCard,
   LearningWorkspaceState,
+  ReviewCardMode,
   SourceDocument,
 } from "../../domain/learning";
+import {
+  BUILTIN_MATERIAL_TYPES,
+  BUILTIN_QUESTION_TYPES,
+  BUILTIN_TOPICS,
+} from "../../domain/seeds";
+import {
+  buildKnowledgeCardChecklist,
+  enableKnowledgeCardReview,
+  verifyKnowledgeCard,
+} from "./knowledgeCardWorkflow";
 
 export type LibrarySection = "sources" | "cards" | "outputs";
 
@@ -79,13 +90,66 @@ function SourceEditor({ source, workspace, onChange }: { source: SourceDocument;
 
 function CardEditor({ card, workspace, onChange }: { card: KnowledgeCard; workspace: LearningWorkspaceState; onChange: (value: LearningWorkspaceState) => void }) {
   const sources = workspace.cardSources.filter((item) => item.cardId === card.id);
+  const usages = workspace.cardUsages.filter((item) => item.cardId === card.id);
+  const checklist = buildKnowledgeCardChecklist(card, workspace);
+  const readyToVerify = checklist.every((item) => item.passed);
+  const [reviewMode, setReviewMode] = useState<ReviewCardMode>("key-point-recall");
   const update = (patch: Partial<KnowledgeCard>) => onChange({ ...workspace, cards: workspace.cards.map((item) => item.id === card.id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item) });
-  const verify = () => update({ lifecycle: "usable", verificationStatus: sources.length ? "source-verified" : "user-verified" });
-  const addReview = () => {
-    const review = workspace.reviewCards.find((item) => item.knowledgeCardId === card.id) ?? { id: `review-card-${card.id}`, knowledgeCardId: card.id, mode: "key-point-recall" as const, promptMd: card.title, answerMd: card.contentMd, nextReviewAt: null, lastReviewedAt: null, ease: 2.5, intervalDays: 0, repetitions: 0, lapses: 0 };
-    onChange({ ...workspace, cards: workspace.cards.map((item) => item.id === card.id ? { ...item, reviewEnabled: true, updatedAt: new Date().toISOString() } : item), reviewCards: [review, ...workspace.reviewCards.filter((item) => item.id !== review.id)] });
-  };
-  return <div className="knowledge-form"><input className="knowledge-title" value={card.title} onChange={(event) => update({ title: event.target.value })} /><textarea value={card.contentMd} onChange={(event) => update({ contentMd: event.target.value })} /><div className="trace-panel"><strong>来源追溯</strong>{sources.length ? sources.map((source,index) => <span key={`${source.cardId}-${index}`}>{source.attemptId ? "来自训练作答" : source.sourceDocumentId ? "来自资料摘录" : "手动创建"}</span>) : <span>暂无结构化来源，请人工核验后再使用。</span>}</div><div className="knowledge-actions"><span>{cardStatus(card)}</span><div><button type="button" className="ghost-button" disabled={card.verificationStatus !== "unverified"} onClick={verify}>确认可使用</button><button type="button" className="primary-button" disabled={card.verificationStatus === "unverified" || card.reviewEnabled} onClick={addReview}>{card.reviewEnabled ? "已加入复习" : "加入复习"}</button></div></div></div>;
+  const toggleQuestionType = (slug: string, checked: boolean) => update({
+    questionTypeSlugs: checked
+      ? [...new Set([...card.questionTypeSlugs, slug])]
+      : card.questionTypeSlugs.filter((item) => item !== slug),
+  });
+
+  return <div className="knowledge-form">
+    <input className="knowledge-title" value={card.title} onChange={(event) => update({ title: event.target.value })} />
+    <div className="card-metadata-grid">
+      <label>主题<select value={card.topicSlug} onChange={(event) => update({ topicSlug: event.target.value })}><option value="">待分类</option>{BUILTIN_TOPICS.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select></label>
+      <label>素材类型<select value={card.cardType} onChange={(event) => update({ cardType: event.target.value as KnowledgeCard["cardType"] })}>{BUILTIN_MATERIAL_TYPES.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <label className="card-source-field">来源说明<input value={card.sourceLabel} onChange={(event) => update({ sourceLabel: event.target.value })} placeholder="发布机构、文件或训练名称" /></label>
+    </div>
+    <fieldset className="card-question-types"><legend>适用题型</legend>{BUILTIN_QUESTION_TYPES.map((item) => <label key={item.slug}><input type="checkbox" checked={card.questionTypeSlugs.includes(item.slug)} onChange={(event) => toggleQuestionType(item.slug, event.target.checked)} />{item.name}</label>)}</fieldset>
+    <textarea value={card.contentMd} onChange={(event) => update({ contentMd: event.target.value, summary: event.target.value.replace(/\s+/g, " ").slice(0, 100) })} />
+    <section className="card-quality-panel" aria-label="知识卡质量检查">
+      <div className="panel-title-row"><strong>可使用检查</strong><span>{checklist.filter((item) => item.passed).length} / {checklist.length}</span></div>
+      <div className="card-checklist">{checklist.map((item) => <div key={item.id} className={item.passed ? "passed" : "pending"}><span>{item.passed ? "通过" : "待补"}</span><div><strong>{item.label}</strong><small>{item.detail}</small></div></div>)}</div>
+    </section>
+    <div className="trace-grid">
+      <div className="trace-panel"><strong>来源追溯</strong>{sources.length ? sources.map((source,index) => <span key={`${source.cardId}-${index}`}>{describeCardSource(source, workspace)}</span>) : <span>{card.sourceLabel || "暂无结构化来源，请补充来源说明。"}</span>}</div>
+      <div className="trace-panel"><strong>真实调用 · {usages.length}</strong>{usages.length ? usages.slice(0, 5).map((usage) => <span key={usage.id}>{describeCardUsage(usage.attemptId, workspace)} · {usageKindLabel(usage.usageKind)}</span>) : <span>尚未在训练作答中调用。</span>}</div>
+    </div>
+    <div className="knowledge-actions"><span>{cardStatus(card)}</span><div className="review-action-group"><select aria-label="复习模式" value={reviewMode} onChange={(event) => setReviewMode(event.target.value as ReviewCardMode)}>{REVIEW_MODE_OPTIONS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><button type="button" className="ghost-button" disabled={card.verificationStatus !== "unverified" || !readyToVerify} onClick={() => onChange(verifyKnowledgeCard(workspace, card.id))}>确认可使用</button><button type="button" className="primary-button" disabled={card.verificationStatus === "unverified"} onClick={() => onChange(enableKnowledgeCardReview(workspace, card.id, reviewMode))}>{card.reviewEnabled ? "增加复习卡" : "加入复习"}</button></div></div>
+  </div>;
+}
+
+const REVIEW_MODE_OPTIONS: readonly { id: ReviewCardMode; label: string }[] = [
+  { id: "key-point-recall", label: "要点回忆" },
+  { id: "expression-recall", label: "表达复述" },
+  { id: "case-application", label: "案例调用" },
+  { id: "placement-recall", label: "位置调用" },
+  { id: "micro-writing", label: "微型作答" },
+];
+
+function describeCardSource(source: LearningWorkspaceState["cardSources"][number], workspace: LearningWorkspaceState): string {
+  if (source.attemptId) {
+    const attempt = workspace.attempts.find((item) => item.id === source.attemptId);
+    const exercise = workspace.exercises.find((item) => item.id === attempt?.exerciseId);
+    return `训练：${exercise?.title || "历史作答"}`;
+  }
+  if (source.sourceDocumentId) {
+    const document = workspace.sources.find((item) => item.id === source.sourceDocumentId);
+    return `资料：${document?.title || "历史资料"}${document?.publisher ? ` · ${document.publisher}` : ""}`;
+  }
+  return "人工创建";
+}
+
+function describeCardUsage(attemptId: string, workspace: LearningWorkspaceState): string {
+  const attempt = workspace.attempts.find((item) => item.id === attemptId);
+  return workspace.exercises.find((item) => item.id === attempt?.exerciseId)?.title || "历史训练";
+}
+
+function usageKindLabel(kind: LearningWorkspaceState["cardUsages"][number]["usageKind"]): string {
+  return { title: "标题", excerpt: "摘要", content: "正文", argument: "论点", evidence: "论据" }[kind];
 }
 
 function addBlankSource(workspace: LearningWorkspaceState): LearningWorkspaceState {

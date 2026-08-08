@@ -16,3 +16,4 @@ Thumbs.db
 backups/
 .worktrees/
 worktrees/
+.playwright-cli/

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { BUILTIN_QUESTION_TYPES } from "../../domain/seeds";
-import type { FeedbackDimensions, LearningWorkspaceState, PracticeStage } from "../../domain/learning";
+import type { CardUsage, FeedbackDimensions, KnowledgeCard, LearningWorkspaceState, PracticeStage } from "../../domain/learning";
+import { insertKnowledgeCardIntoAttempt } from "../learning/knowledgeCardWorkflow";
 import { createManualFeedback, nextPracticeStage } from "./practiceModel";
 
 interface PracticePanelProps {
@@ -25,7 +26,14 @@ export function PracticePanel({ workspace, focusedExerciseId, onChange, onCreate
   const [summary, setSummary] = useState(feedback?.summaryMd ?? "");
   const [suggestions, setSuggestions] = useState(feedback?.suggestionsMd ?? "");
   const [scores, setScores] = useState<FeedbackDimensions>(feedback?.dimensions ?? emptyScores());
+  const [usageKind, setUsageKind] = useState<Extract<CardUsage["usageKind"], "content" | "argument" | "evidence">>("content");
   const wordCount = useMemo(() => (attempt?.answerMd ?? "").replace(/\s+/g, "").length, [attempt?.answerMd]);
+  const callableCards = useMemo(
+    () => workspace.cards
+      .filter((item) => item.verificationStatus !== "unverified" && item.lifecycle !== "archived")
+      .sort((left, right) => Number(right.core) - Number(left.core) || left.title.localeCompare(right.title, "zh-CN")),
+    [workspace.cards],
+  );
 
   if (!selected || !attempt) {
     return (
@@ -74,13 +82,26 @@ export function PracticePanel({ workspace, focusedExerciseId, onChange, onCreate
         <section className="practice-editor feature-panel">
           {selected.currentStage === "reading" ? <><h2>题目与给定资料</h2><textarea className="practice-writing-area" value={selected.promptMd} onChange={(event) => updateExercise({ promptMd: event.target.value })} placeholder="粘贴题目要求与给定资料…" /></> : null}
           {selected.currentStage === "outline" ? <><h2>作答提纲</h2><textarea className="practice-writing-area" value={attempt.outlineMd} onChange={(event) => updateAttempt({ outlineMd: event.target.value })} placeholder="先列总括句、要点和结构…" /></> : null}
-          {selected.currentStage === "answer" ? <><div className="panel-title-row"><h2>正式作答</h2><span>{wordCount} / {selected.wordLimit ?? "不限"} 字</span></div><textarea className="practice-writing-area" value={attempt.answerMd} onChange={(event) => updateAttempt({ answerMd: event.target.value, status: "in-progress" })} placeholder="在这里完成作答…" /></> : null}
+          {selected.currentStage === "answer" ? <><div className="panel-title-row"><h2>正式作答</h2><span>{wordCount} / {selected.wordLimit ?? "不限"} 字</span></div><div className="answer-writing-layout"><textarea className="practice-writing-area" value={attempt.answerMd} onChange={(event) => updateAttempt({ answerMd: event.target.value, status: "in-progress" })} placeholder="在这里完成作答…" /><CallableCardShelf cards={callableCards} usageKind={usageKind} onUsageKind={setUsageKind} onInsert={(cardId) => onChange(insertKnowledgeCardIntoAttempt(workspace, cardId, attempt.id, usageKind))} /></div></> : null}
           {selected.currentStage === "reflection" ? <ReflectionEditor answer={attempt.answerMd} scores={scores} summary={summary} suggestions={suggestions} onScores={setScores} onSummary={setSummary} onSuggestions={setSuggestions} onSave={saveFeedback} onExtract={() => onExtractCard(attempt.id, attempt.answerMd)} /> : null}
           {selected.currentStage !== "reflection" ? <div className="practice-footer"><button type="button" className="primary-button" onClick={advance}>进入下一阶段</button></div> : null}
         </section>
       </div>
     </section>
   );
+}
+
+function CallableCardShelf({ cards, usageKind, onUsageKind, onInsert }: {
+  readonly cards: readonly KnowledgeCard[];
+  readonly usageKind: Extract<CardUsage["usageKind"], "content" | "argument" | "evidence">;
+  readonly onUsageKind: (value: Extract<CardUsage["usageKind"], "content" | "argument" | "evidence">) => void;
+  readonly onInsert: (cardId: string) => void;
+}) {
+  return <aside className="callable-card-shelf" aria-label="可调用知识卡">
+    <div className="callable-card-header"><div><strong>可调用知识卡</strong><small>插入会记录本次调用</small></div><select aria-label="调用用途" value={usageKind} onChange={(event) => onUsageKind(event.target.value as typeof usageKind)}><option value="content">正文</option><option value="argument">论点</option><option value="evidence">论据</option></select></div>
+    <div className="callable-card-list">{cards.map((card) => <div className="callable-card-item" key={card.id}><div><strong>{card.title}</strong><small>{card.sourceLabel || "人工验证"}</small></div><button type="button" className="ghost-button" onClick={() => onInsert(card.id)}>插入</button></div>)}</div>
+    {!cards.length ? <div className="callable-card-empty">暂无已验证知识卡。先到素材页完成卡片检查。</div> : null}
+  </aside>;
 }
 
 function ReflectionEditor({ answer, scores, summary, suggestions, onScores, onSummary, onSuggestions, onSave, onExtract }: {
