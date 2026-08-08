@@ -1,5 +1,5 @@
 export const PRIMARY_ROUTE_IDS = ["today", "practice", "library", "review", "progress"] as const;
-export const LEGACY_ROUTE_IDS = ["rewrite", "graph", "taxonomy", "importExport", "settings"] as const;
+export const LEGACY_ROUTE_IDS = ["importExport", "settings"] as const;
 
 export type PrimaryRouteId = (typeof PRIMARY_ROUTE_IDS)[number];
 export type LegacyRouteId = (typeof LEGACY_ROUTE_IDS)[number];
@@ -26,7 +26,11 @@ export function parseAppRoute(value: unknown): AppRoute {
     return DEFAULT_APP_ROUTE;
   }
 
-  const candidate = value as Partial<AppRoute>;
+  const candidate = value as { readonly id?: unknown; readonly entityId?: unknown };
+
+  if (candidate.id === "rewrite") return { id: "practice", entityId: null };
+  if (candidate.id === "graph") return { id: "library", entityId: null };
+  if (candidate.id === "taxonomy") return { id: "progress", entityId: null };
 
   if (!isAppRouteId(candidate.id)) {
     return DEFAULT_APP_ROUTE;

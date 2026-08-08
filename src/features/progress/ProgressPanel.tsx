@@ -2,6 +2,7 @@ import type { LearningWorkspaceState, ReviewCardMode } from "../../domain/learni
 import type { MaterialDraft } from "../materials/materialModel";
 import { REVIEW_MODE_LABELS } from "../review/knowledgeReview";
 import type { ReviewLog } from "../review/reviewSession";
+import type { RewriteLog } from "../rewrite/rewriteWorkshop";
 
 interface ProgressPanelProps {
   readonly materials: readonly MaterialDraft[];
@@ -10,9 +11,10 @@ interface ProgressPanelProps {
   readonly onOpenPractice: () => void;
   readonly onOpenReview: () => void;
   readonly onOpenKnowledgeCard: (cardId: string) => void;
+  readonly rewriteLogs: readonly RewriteLog[];
 }
 
-export function ProgressPanel({ materials, workspace, reviewLogs, onOpenPractice, onOpenReview, onOpenKnowledgeCard }: ProgressPanelProps) {
+export function ProgressPanel({ materials, workspace, reviewLogs, rewriteLogs, onOpenPractice, onOpenReview, onOpenKnowledgeCard }: ProgressPanelProps) {
   const completed = workspace.exercises.filter((item) => item.status === "completed").length;
   const usableCards = workspace.cards.filter((item) => item.lifecycle === "usable" || item.lifecycle === "core").length;
   const usedCards = new Set(workspace.cardUsages.map((item) => item.cardId)).size;
@@ -54,6 +56,15 @@ export function ProgressPanel({ materials, workspace, reviewLogs, onOpenPractice
       <section className="feature-panel">
         <div className="panel-title-row"><h2>学习闭环</h2></div>
         <div className="funnel-list"><span>素材 {materials.filter((item) => item.status !== "archived").length}</span><span>知识卡 {workspace.cards.length}</span><span>已验证 {workspace.cards.filter((item) => item.verificationStatus !== "unverified").length}</span><span>已调用 {workspace.cardUsages.length}</span></div>
+      </section>
+      <section className="feature-panel legacy-history-panel">
+        <div className="panel-title-row"><h2>历史改写记录</h2><span>{rewriteLogs.length} 条</span></div>
+        {rewriteLogs.length ? <div className="legacy-history-list">{rewriteLogs.map((log) => (
+          <details key={log.id}>
+            <summary><span>{log.targetId}</span><strong>{new Date(log.createdAt).toLocaleDateString("zh-CN")}</strong></summary>
+            <div><small>原文</small><p>{log.originalText}</p><small>修改稿</small><p>{log.resultText || "未保存修改结果"}</p></div>
+          </details>
+        ))}</div> : <Empty title="没有旧版改写记录" detail="新版表达修改统一在训练的复盘阶段完成，并保留初稿与修改稿。" />}
       </section>
     </div>
   </section>;

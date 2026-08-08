@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ReviewRating } from "../domain/enums";
-import { AnswerWorkbenchPanel } from "../features/answer/AnswerWorkbenchPanel";
-import type { AnswerMaterialInput, AnswerRewriteDraft } from "../features/answer/answerWorkbench";
 import { createAppDataService, type AppDataService, type StorageMode } from "../features/appData/appDataService";
 import { DashboardPanel } from "../features/dashboard/DashboardPanel";
 import {
@@ -12,7 +10,6 @@ import {
   type StudyTask,
 } from "../domain/learning";
 import { MarkdownEditor } from "../features/editor/MarkdownEditor";
-import { GraphPanel } from "../features/graph/GraphPanel";
 import { readArchiveFile, saveArchiveFile } from "../features/importExport/archiveFileAdapter";
 import {
   createAppArchive,
@@ -33,15 +30,12 @@ import {
   createMicroPracticeFromReview,
   type KnowledgeReviewCompletion,
 } from "../features/review/knowledgeReview";
-import { RewritePanel } from "../features/rewrite/RewritePanel";
 import {
-  buildMaterialInputFromRewrite,
   type RewriteLog,
   type RewriteMaterialInput,
 } from "../features/rewrite/rewriteWorkshop";
 import { DEFAULT_APP_SETTINGS, applyThemeMode, type AppSettings } from "../features/settings/appSettings";
 import { SettingsPanel } from "../features/settings/SettingsPanel";
-import { TaxonomyPanel } from "../features/taxonomy/TaxonomyPanel";
 import { TodayPanel } from "../features/today/TodayPanel";
 import { createStudySession, type StudyPlanMinutes } from "../features/today/todayPlan";
 import { PracticePanel } from "../features/practice/PracticePanel";
@@ -67,9 +61,7 @@ import {
   confirmSelectedMaterialAndEnableReview,
   createInitialMaterialState,
   createMaterial,
-  createMaterialFromAnswerDraft,
   createMaterialFromSource,
-  createMaterialFromRewrite,
   getActiveMaterials,
   getSelectedMaterial,
   reviewMaterial,
@@ -100,8 +92,6 @@ export function AppShell() {
   const [route, setRoute] = useState(() => loadStoredAppRoute(getRouteStorage()));
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [reviewFocusId, setReviewFocusId] = useState<string | null>(null);
-  const [rewriteFocusId, setRewriteFocusId] = useState<string | null>(null);
-  const [answerRewriteDraft, setAnswerRewriteDraft] = useState<AnswerRewriteDraft | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>(STORAGE_MODE_PREVIEW);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
@@ -331,10 +321,6 @@ export function AppShell() {
   const openView = useCallback((nextView: AppRouteId, entityId: string | null = null) => {
     setRoute(createAppRoute(nextView, entityId));
     setReviewFocusId(null);
-    if (nextView !== "rewrite") {
-      setRewriteFocusId(null);
-      setAnswerRewriteDraft(null);
-    }
   }, []);
 
   const openLibrary = useCallback(() => openView("library"), [openView]);
@@ -344,24 +330,11 @@ export function AppShell() {
   }, [openView]);
   const openPractice = useCallback(() => openView("practice"), [openView]);
   const openReview = useCallback(() => openView("review"), [openView]);
-  const openRewrite = useCallback(() => {
-    setRewriteFocusId(null);
-    setAnswerRewriteDraft(null);
-    openView("rewrite");
-  }, [openView]);
   const openImportExport = useCallback(() => openView("importExport"), [openView]);
-
-  const openMaterialFromGraph = useCallback((materialId: string) => {
-    setFilters(DEFAULT_MATERIAL_FILTERS);
-    setReviewFocusId(null);
-    setState((current) => selectMaterial(current, materialId));
-    setRoute(createAppRoute("library", materialId));
-  }, []);
 
   const openMaterialInLibrary = useCallback((materialId: string) => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
-    setRewriteFocusId(null);
     setLibrarySection("outputs");
     setState((current) => selectMaterial(current, materialId));
     setRoute(createAppRoute("library", materialId));
@@ -373,15 +346,38 @@ export function AppShell() {
   }, [state.selectedId]);
 
   const startSelectedRewrite = useCallback(() => {
-    if (!state.selectedId) {
-      return;
-    }
-
-    setRewriteFocusId(state.selectedId);
-    setAnswerRewriteDraft(null);
-    setReviewFocusId(null);
-    setRoute(createAppRoute("rewrite", state.selectedId));
-  }, [state.selectedId]);
+    const material = state.materials.find((item) => item.id === state.selectedId);
+    if (!material) return;
+    const now = new Date();
+    const exerciseId = `exercise-polish-${now.getTime()}`;
+    setLearningWorkspace((current) => ({
+      ...current,
+      exercises: [{
+        id: exerciseId,
+        title: `表达打磨：${material.title}`,
+        promptMd: "请对照原文，从要点、结构、逻辑、表达和规范性五个维度完成复盘修改。",
+        questionTypeSlug: material.questionTypeSlugs[0] ?? "analysis",
+        wordLimit: null,
+        timeLimitMinutes: 15,
+        status: "active",
+        currentStage: "reflection",
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      }, ...current.exercises],
+      attempts: [{
+        id: `attempt-polish-${now.getTime()}`,
+        exerciseId,
+        outlineMd: "",
+        answerMd: material.contentMd,
+        status: "submitted",
+        startedAt: now.toISOString(),
+        finishedAt: now.toISOString(),
+        elapsedMs: 0,
+        updatedAt: now.toISOString(),
+      }, ...current.attempts],
+    }));
+    setRoute(createAppRoute("practice", exerciseId));
+  }, [state.materials, state.selectedId]);
 
   const confirmSelected = useCallback(() => {
     setState((current) => confirmSelectedMaterial(current));
@@ -415,10 +411,6 @@ export function AppShell() {
     [state.materials],
   );
 
-  const saveRewriteLog = useCallback((log: RewriteLog) => {
-    setRewriteLogs((current) => [log, ...current.filter((item) => item.id !== log.id)]);
-  }, []);
-
   const completeKnowledgeReview = useCallback((completion: KnowledgeReviewCompletion) => {
     setReviewFocusId(null);
     setLearningWorkspace((current) => applyKnowledgeReviewCompletion(current, completion));
@@ -434,26 +426,10 @@ export function AppShell() {
     }
   }, [learningWorkspace]);
 
-  const saveRewriteAsMaterial = useCallback((log: RewriteLog) => {
-    setFilters(DEFAULT_MATERIAL_FILTERS);
-    setReviewFocusId(null);
-    setRewriteFocusId(null);
-    setState((current) => createMaterialFromRewrite(current, buildMaterialInputFromRewrite(log)));
-    setRoute(createAppRoute("library"));
-  }, []);
-
   const saveSourceAsMaterial = useCallback((input: RewriteMaterialInput) => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
     setState((current) => createMaterialFromSource(current, input));
-    setRoute(createAppRoute("library"));
-  }, []);
-
-  const saveAnswerDraftAsMaterial = useCallback((input: AnswerMaterialInput) => {
-    setFilters(DEFAULT_MATERIAL_FILTERS);
-    setReviewFocusId(null);
-    setRewriteFocusId(null);
-    setState((current) => createMaterialFromAnswerDraft(current, input));
     setRoute(createAppRoute("library"));
   }, []);
 
@@ -544,13 +520,6 @@ export function AppShell() {
     setRoute(createAppRoute("library", task.entityId));
   }, []);
 
-  const sendAnswerDraftToRewrite = useCallback((draft: AnswerRewriteDraft) => {
-    setReviewFocusId(null);
-    setRewriteFocusId(null);
-    setAnswerRewriteDraft(draft);
-    setRoute(createAppRoute("rewrite"));
-  }, []);
-
   const downloadArchive = useCallback(() => {
     void saveArchiveFile(archiveJson, createArchiveFilename()).catch((error) => {
       console.warn("Unable to export CivicForge archive.", error);
@@ -593,12 +562,11 @@ export function AppShell() {
       { id: "review", label: "复习", hint: "开始主动回忆", keywords: ["Anki"], run: openReview },
       { id: "progress", label: "进度", hint: "查看主题与题型覆盖", keywords: ["统计"], run: () => openView("progress") },
       { id: "new-material", label: "新建素材", hint: "创建一条待加工素材", keywords: ["记录"], run: createVisibleMaterial },
-      { id: "rewrite", label: "Rewrite 工具", hint: "打开旧版改写工坊", keywords: ["改写"], run: openRewrite },
-      { id: "graph", label: "知识图谱", hint: "打开旧版关系图", keywords: ["关联"], run: () => openView("graph") },
+      { id: "polish", label: "表达打磨", hint: "在训练复盘中修改一份作答", keywords: ["Rewrite", "改写"], run: openPractice },
       { id: "import", label: "导入导出", hint: "备份或恢复本地数据", keywords: ["备份"], run: openImportExport },
       { id: "settings", label: "设置", hint: "主题、存储和小组件", keywords: ["偏好"], run: () => openView("settings") },
     ],
-    [createVisibleMaterial, openImportExport, openLibrary, openPractice, openReview, openRewrite, openView],
+    [createVisibleMaterial, openImportExport, openLibrary, openPractice, openReview, openView],
   );
 
   return (
@@ -630,15 +598,6 @@ export function AppShell() {
             进度
           </NavButton>
           <div className="navigation-section-label">工具</div>
-          <NavButton active={view === "rewrite"} onClick={openRewrite}>
-            Rewrite
-          </NavButton>
-          <NavButton active={view === "graph"} onClick={() => openView("graph")}>
-            知识图谱
-          </NavButton>
-          <NavButton active={view === "taxonomy"} onClick={() => openView("taxonomy")}>
-            主题标签（旧版）
-          </NavButton>
           <NavButton active={view === "importExport"} onClick={openImportExport}>
             导入导出
           </NavButton>
@@ -749,17 +708,6 @@ export function AppShell() {
           onEditKnowledgeCard={openKnowledgeCardInLibrary}
           onCreateMicroPractice={createReviewMicroPractice}
         />
-      ) : view === "rewrite" ? (
-        <RewritePanel
-          materials={activeMaterials}
-          logs={rewriteLogs}
-          focusedMaterialId={rewriteFocusId}
-          initialDraft={answerRewriteDraft}
-          onSaveLog={saveRewriteLog}
-          onSaveAsMaterial={saveRewriteAsMaterial}
-        />
-      ) : view === "graph" ? (
-        <GraphPanel materials={activeMaterials} onOpenMaterial={openMaterialFromGraph} />
       ) : view === "progress" ? (
         <ProgressPanel
           materials={state.materials}
@@ -768,9 +716,8 @@ export function AppShell() {
           onOpenPractice={openPractice}
           onOpenReview={openReview}
           onOpenKnowledgeCard={openKnowledgeCardInLibrary}
+          rewriteLogs={rewriteLogs}
         />
-      ) : view === "taxonomy" ? (
-        <TaxonomyPanel materials={state.materials} />
       ) : view === "importExport" ? (
         <ImportExportPanel
           archiveJson={archiveJson}

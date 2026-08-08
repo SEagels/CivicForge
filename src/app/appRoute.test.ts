@@ -9,15 +9,14 @@ import {
 } from "./appRoute";
 
 describe("app route", () => {
-  it("parses primary and legacy routes with an optional entity id", () => {
+  it("parses active routes and redirects retired legacy routes", () => {
     expect(parseAppRoute({ id: "practice", entityId: "exercise-1" })).toEqual({
       id: "practice",
       entityId: "exercise-1",
     });
-    expect(parseAppRoute({ id: "rewrite", entityId: null })).toEqual({
-      id: "rewrite",
-      entityId: null,
-    });
+    expect(parseAppRoute({ id: "rewrite", entityId: null })).toEqual({ id: "practice", entityId: null });
+    expect(parseAppRoute({ id: "graph", entityId: null })).toEqual({ id: "library", entityId: null });
+    expect(parseAppRoute({ id: "taxonomy", entityId: null })).toEqual({ id: "progress", entityId: null });
   });
 
   it("falls back to today for malformed or unsupported routes", () => {

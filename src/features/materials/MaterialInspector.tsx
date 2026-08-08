@@ -128,7 +128,7 @@ export function MaterialInspector({
           ) : null}
           {workbenchStatus.primaryStep !== "done" ? (
             <button type="button" className="ghost-button" onClick={onStartRewrite}>
-              去 Rewrite 打磨
+              去训练复盘打磨
             </button>
           ) : (
             <button type="button" className="ghost-button" onClick={onStartReview}>

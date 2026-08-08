@@ -13,6 +13,7 @@ import {
 import {
   buildKnowledgeCardChecklist,
   enableKnowledgeCardReview,
+  findRelatedKnowledgeCards,
   verifyKnowledgeCard,
 } from "./knowledgeCardWorkflow";
 
@@ -65,7 +66,7 @@ export function KnowledgeHubPanel({
           {selected && section === "sources"
             ? <SourceEditor source={selected as SourceDocument} workspace={workspace} onChange={onChange} />
             : selected
-              ? <CardEditor card={selected as KnowledgeCard} workspace={workspace} onChange={onChange} />
+              ? <CardEditor card={selected as KnowledgeCard} workspace={workspace} onChange={onChange} onSelectCard={setSelectedId} />
               : <div className="empty-stage"><p>选择一项开始整理。</p></div>}
         </section>
       </div>
@@ -88,11 +89,12 @@ function SourceEditor({ source, workspace, onChange }: { source: SourceDocument;
   return <div className="knowledge-form"><input className="knowledge-title" value={source.title} onChange={(event) => update({ title: event.target.value })} placeholder="资料标题" /><div className="knowledge-meta-row"><input value={source.publisher} onChange={(event) => update({ publisher: event.target.value })} placeholder="发布机构 / 来源" /><input value={source.sourceUri} onChange={(event) => update({ sourceUri: event.target.value })} placeholder="来源网址或文件位置" /></div><textarea value={source.contentMd} onChange={(event) => update({ contentMd: event.target.value })} placeholder="粘贴资料正文…" /><div className="knowledge-actions"><span>状态：{source.status === "draft" ? "待整理" : "已整理"}</span><button type="button" className="primary-button" disabled={!source.contentMd.trim()} onClick={extract}>提取为待验证卡片</button></div></div>;
 }
 
-function CardEditor({ card, workspace, onChange }: { card: KnowledgeCard; workspace: LearningWorkspaceState; onChange: (value: LearningWorkspaceState) => void }) {
+function CardEditor({ card, workspace, onChange, onSelectCard }: { card: KnowledgeCard; workspace: LearningWorkspaceState; onChange: (value: LearningWorkspaceState) => void; onSelectCard: (cardId: string) => void }) {
   const sources = workspace.cardSources.filter((item) => item.cardId === card.id);
   const usages = workspace.cardUsages.filter((item) => item.cardId === card.id);
   const checklist = buildKnowledgeCardChecklist(card, workspace);
   const readyToVerify = checklist.every((item) => item.passed);
+  const relatedCards = findRelatedKnowledgeCards(card, workspace.cards);
   const [reviewMode, setReviewMode] = useState<ReviewCardMode>("key-point-recall");
   const update = (patch: Partial<KnowledgeCard>) => onChange({ ...workspace, cards: workspace.cards.map((item) => item.id === card.id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item) });
   const toggleQuestionType = (slug: string, checked: boolean) => update({
@@ -118,6 +120,15 @@ function CardEditor({ card, workspace, onChange }: { card: KnowledgeCard; worksp
       <div className="trace-panel"><strong>来源追溯</strong>{sources.length ? sources.map((source,index) => <span key={`${source.cardId}-${index}`}>{describeCardSource(source, workspace)}</span>) : <span>{card.sourceLabel || "暂无结构化来源，请补充来源说明。"}</span>}</div>
       <div className="trace-panel"><strong>真实调用 · {usages.length}</strong>{usages.length ? usages.slice(0, 5).map((usage) => <span key={usage.id}>{describeCardUsage(usage.attemptId, workspace)} · {usageKindLabel(usage.usageKind)}</span>) : <span>尚未在训练作答中调用。</span>}</div>
     </div>
+    <section className="related-knowledge-panel" aria-label="相关知识">
+      <div className="panel-title-row"><strong>相关知识</strong><span>{relatedCards.length} 条</span></div>
+      {relatedCards.length ? <div className="related-card-list">{relatedCards.map((item) => (
+        <button type="button" key={item.card.id} onClick={() => onSelectCard(item.card.id)} title={item.reasons.join("、")}>
+          <span><strong>{item.card.title}</strong><small>{item.reasons.join(" · ")}</small></span>
+          <b>{item.score}</b>
+        </button>
+      ))}</div> : <div className="empty-list compact"><span>补齐主题、题型和标签后，这里会出现可共同调用的知识卡。</span></div>}
+    </section>
     <div className="knowledge-actions"><span>{cardStatus(card)}</span><div className="review-action-group"><select aria-label="复习模式" value={reviewMode} onChange={(event) => setReviewMode(event.target.value as ReviewCardMode)}>{REVIEW_MODE_OPTIONS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><button type="button" className="ghost-button" disabled={card.verificationStatus !== "unverified" || !readyToVerify} onClick={() => onChange(verifyKnowledgeCard(workspace, card.id))}>确认可使用</button><button type="button" className="primary-button" disabled={card.verificationStatus === "unverified"} onClick={() => onChange(enableKnowledgeCardReview(workspace, card.id, reviewMode))}>{card.reviewEnabled ? "增加复习卡" : "加入复习"}</button></div></div>
   </div>;
 }

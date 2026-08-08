@@ -1,66 +1,29 @@
 # Backup And Restore / 备份与恢复
 
-CivicForge is local-first. Backups are designed to keep the user in control of files on their own machine.
+## Recommended Backup / 推荐备份
 
-CivicForge 是本地优先应用。备份与恢复围绕用户自己的本地文件展开。
+1. Open **Import/Export / 导入导出** and export an archive v3 JSON file.
+2. Close CivicForge before copying `civicforge.db` from the application data directory.
+3. Store the JSON archive and database copy in separate safe locations.
 
-## Current Implementation / 当前实现
+1. 打开“导入导出”，导出 archive v3 JSON 文件。
+2. 关闭 CivicForge 后，再复制应用数据目录中的 `civicforge.db`。
+3. 将 JSON 归档和数据库副本分别保存在可靠位置。
 
-The Import/Export page supports a portable JSON archive.
+Archive v3 contains legacy materials, review and Rewrite logs, settings, sources, excerpts, exercises, attempts, revisions, feedback, knowledge cards, provenance, usage records, review cards, and study sessions.
 
-Archive v3 contains:
+archive v3 包含旧素材、复习与 Rewrite 日志、设置，以及资料、摘录、练习、作答、修改稿、反馈、知识卡、来源、调用记录、复习卡和学习会话。
 
-- Legacy material state
-- Review and Rewrite history
-- App settings
-- Complete 2.0 learning workspace: sources, exercises, attempts, revisions, knowledge cards, review cards, and study sessions
-- Archive version and export timestamp
+## Restore / 恢复
 
-archive v3 包含旧版素材状态、复习与 Rewrite 历史、应用设置，以及资料、练习、作答、修改稿、知识卡片、复习卡和学习会话等完整 2.0 工作区数据。
+Use **Import/Export -> Restore** and choose a valid archive. CivicForge validates it before replacing current state. Archive v1 and v2 remain importable; missing 2.0 collections are initialized safely.
 
-## File Operations / 文件操作
+在“导入导出”中选择恢复文件。CivicForge 会先校验归档，再替换当前状态。archive v1、v2 仍可导入，缺失的 2.0 集合会安全初始化。
 
-In Tauri desktop runtime:
+After restore, verify material count, knowledge cards, due reviews, practice history, and settings. Restart once to confirm the state was written to SQLite.
 
-- Export uses `@tauri-apps/plugin-dialog` to choose a save path.
-- Export uses `@tauri-apps/plugin-fs` to write the JSON file.
-- Restore uses the Tauri dialog to choose a JSON file.
-- Restore uses the Tauri fs plugin to read the selected file.
+恢复后请检查素材数量、知识卡、到期复习、训练历史和设置，并重启一次应用，确认恢复结果已写入 SQLite。
 
-In browser preview:
+If an upgrade migration fails, the transaction rolls back automatically. Preserve the failed database before reinstalling or restoring so it remains available for diagnosis.
 
-- Export falls back to a Blob download.
-- Restore can use the file input or pasted JSON text.
-
-在 Tauri 桌面运行时，导出和恢复优先使用官方 dialog/fs 插件。浏览器预览中，导出回退为浏览器下载，恢复支持文件输入或粘贴 JSON。
-
-## Restore Safety / 恢复安全
-
-Restore currently validates:
-
-- `appName` is `CivicForge`
-- archive version is compatible (`v1`, `v2`, and `v3` are accepted)
-- material state shape is valid
-- rewrite logs shape is valid
-- settings and 2.0 learning workspace shapes are valid
-
-If validation fails, the app does not replace current state.
-
-恢复时会校验应用名、归档版本、素材结构、Rewrite 结构和设置结构。校验失败不会覆盖当前数据。
-
-## Upgrade Backup / 升级前备份
-
-Before a major upgrade, export archive v3 and keep a copy of the SQLite file after fully closing CivicForge. JSON is the portable recovery format; the SQLite copy is an additional exact snapshot.
-
-重大升级前，请先导出 archive v3，并在完全退出 CivicForge 后复制 SQLite 文件。JSON 用于跨版本恢复，SQLite 副本作为额外的精确快照。
-
-## Future Enhancements / 后续增强
-
-Possible later work:
-
-- Daily first-launch backup.
-- Retention policy, such as keeping the latest 10 backups.
-- Restore preview before applying.
-- Export selected materials as Markdown with frontmatter.
-
-后续可以继续增强为完整 SQLite 文件备份、每日首次启动自动备份、备份保留策略、恢复前预览，以及 Markdown 归档导出。
+若升级迁移失败，事务会自动回滚。重新安装或恢复前请保留故障数据库原件，以便诊断。

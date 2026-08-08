@@ -12,6 +12,25 @@ export interface KnowledgeCardChecklistItem {
   readonly detail: string;
 }
 
+export interface RelatedKnowledgeCard {
+  readonly card: KnowledgeCard;
+  readonly score: number;
+  readonly reasons: readonly string[];
+}
+
+export function findRelatedKnowledgeCards(
+  card: KnowledgeCard,
+  cards: readonly KnowledgeCard[],
+  limit = 5,
+): readonly RelatedKnowledgeCard[] {
+  return cards
+    .filter((candidate) => candidate.id !== card.id && candidate.lifecycle !== "archived")
+    .map((candidate) => scoreRelatedCard(card, candidate))
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || left.card.title.localeCompare(right.card.title, "zh-CN"))
+    .slice(0, limit);
+}
+
 export function buildKnowledgeCardChecklist(
   card: KnowledgeCard,
   workspace: LearningWorkspaceState,
@@ -192,4 +211,30 @@ function buildReviewPrompt(card: KnowledgeCard, mode: ReviewCardMode): string {
     "micro-writing": `围绕「${card.title}」写一个简短论证段。`,
   };
   return prompts[mode];
+}
+
+function scoreRelatedCard(source: KnowledgeCard, candidate: KnowledgeCard): RelatedKnowledgeCard {
+  const reasons: string[] = [];
+  let score = 0;
+  if (source.topicSlug && source.topicSlug === candidate.topicSlug) {
+    score += 5;
+    reasons.push("同主题");
+  }
+  const sharedQuestionTypes = source.questionTypeSlugs.filter((slug) => candidate.questionTypeSlugs.includes(slug));
+  if (sharedQuestionTypes.length) {
+    score += Math.min(4, sharedQuestionTypes.length * 2);
+    reasons.push("同题型");
+  }
+  const sharedTags = source.tagNames.filter((tag) => candidate.tagNames.includes(tag));
+  if (sharedTags.length) {
+    score += Math.min(3, sharedTags.length);
+    reasons.push("共享标签");
+  }
+  if (source.cardType === candidate.cardType) {
+    score += 1;
+    reasons.push("同素材类型");
+  }
+  if (candidate.verificationStatus !== "unverified") score += 1;
+  if (candidate.core) score += 1;
+  return { card: candidate, score, reasons };
 }

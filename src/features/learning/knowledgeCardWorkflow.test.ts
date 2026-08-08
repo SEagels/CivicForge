@@ -4,6 +4,7 @@ import { EMPTY_LEARNING_WORKSPACE } from "../../domain/learning";
 import {
   buildKnowledgeCardChecklist,
   enableKnowledgeCardReview,
+  findRelatedKnowledgeCards,
   insertKnowledgeCardIntoAttempt,
   verifyKnowledgeCard,
 } from "./knowledgeCardWorkflow";
@@ -57,6 +58,17 @@ describe("knowledge card workflow", () => {
 
     expect(next.attempts[0].answerMd).toBe(`原有作答。\n\n${card.contentMd}`);
     expect(next.cardUsages[0]).toMatchObject({ cardId: card.id, attemptId: "attempt-1", usageKind: "argument", slotKey: "answer" });
+  });
+
+  it("ranks related knowledge by topic, question type, tags, and verification", () => {
+    const card = createCard({ id: "source", tagNames: ["网格治理"] });
+    const related = createCard({ id: "related", title: "网格服务", tagNames: ["网格治理"], verificationStatus: "source-verified", lifecycle: "usable" });
+    const unrelated = createCard({ id: "unrelated", title: "生态案例", topicSlug: "ecological-civilization", questionTypeSlugs: ["essay"], tagNames: [] });
+
+    const result = findRelatedKnowledgeCards(card, [unrelated, related, card]);
+
+    expect(result[0]).toMatchObject({ card: { id: "related" }, reasons: ["同主题", "同题型", "共享标签", "同素材类型"] });
+    expect(result.find((item) => item.card.id === "source")).toBeUndefined();
   });
 });
 
