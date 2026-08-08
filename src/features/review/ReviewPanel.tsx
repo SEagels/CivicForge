@@ -12,14 +12,21 @@ import {
   type ReviewSessionState,
 } from "./reviewSession";
 import { summarizeReviewLogs, type ReviewStatsSummary, type WeakReviewArea } from "./reviewStats";
+import type { LearningWorkspaceState } from "../../domain/learning";
+import type { KnowledgeReviewCompletion } from "./knowledgeReview";
+import { KnowledgeReviewPanel } from "./KnowledgeReviewPanel";
 
 interface ReviewPanelProps {
+  readonly workspace: LearningWorkspaceState;
   readonly materials: readonly MaterialDraft[];
   readonly reviewLogs: readonly ReviewLog[];
   readonly focusedMaterialId: string | null;
   readonly onRate: (materialId: string, rating: ReviewRating, session: CompletedReviewSessionState) => void;
   readonly onBackToLibrary: () => void;
   readonly onEditMaterial: (materialId: string) => void;
+  readonly onCompleteKnowledgeReview: (completion: KnowledgeReviewCompletion) => void;
+  readonly onEditKnowledgeCard: (cardId: string) => void;
+  readonly onCreateMicroPractice: (reviewCardId: string) => void;
 }
 
 const RATING_ACTIONS: readonly {
@@ -42,13 +49,29 @@ const questionTypeNameBySlug: ReadonlyMap<string, string> = new Map(
 const topicNameBySlug: ReadonlyMap<string, string> = new Map(BUILTIN_TOPICS.map((topic) => [topic.slug, topic.name]));
 
 export function ReviewPanel({
+  workspace,
   materials,
   reviewLogs,
   focusedMaterialId,
   onRate,
   onBackToLibrary,
   onEditMaterial,
+  onCompleteKnowledgeReview,
+  onEditKnowledgeCard,
+  onCreateMicroPractice,
 }: ReviewPanelProps) {
+  if (workspace.reviewCards.length > 0) {
+    return (
+      <KnowledgeReviewPanel
+        workspace={workspace}
+        focusedReviewCardId={focusedMaterialId}
+        onComplete={onCompleteKnowledgeReview}
+        onEditCard={onEditKnowledgeCard}
+        onCreateMicroPractice={onCreateMicroPractice}
+        onBackToLibrary={onBackToLibrary}
+      />
+    );
+  }
   const [session, setSession] = useState<ReviewSessionState | null>(null);
   const now = new Date();
   const dueMaterials = getDueReviewMaterials(materials, now);

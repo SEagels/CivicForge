@@ -4549,3 +4549,67 @@ nav button.active {
     transition-duration: 0.01ms !important;
   }
 }
+/* Knowledge-card review keeps the answer secondary until recall is complete. */
+.knowledge-review-workspace {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.knowledge-review-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.knowledge-review-card {
+  min-height: min(620px, calc(100vh - 250px));
+}
+
+.knowledge-review-prompt,
+.knowledge-review-answer {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 760px);
+  margin: 26px auto;
+}
+
+.knowledge-review-prompt > span,
+.knowledge-review-answer > span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.knowledge-review-prompt > p {
+  margin: 0;
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1.65;
+}
+
+.review-followup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 36%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 9%, var(--surface));
+}
+
+.review-followup > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.review-followup span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .knowledge-review-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .review-followup { align-items: stretch; flex-wrap: wrap; }
+  .review-followup > div { flex-basis: 100%; }
+}

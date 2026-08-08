@@ -28,6 +28,11 @@ import {
   type ReviewLog,
 } from "../features/review/reviewSession";
 import { ReviewPanel } from "../features/review/ReviewPanel";
+import {
+  applyKnowledgeReviewCompletion,
+  createMicroPracticeFromReview,
+  type KnowledgeReviewCompletion,
+} from "../features/review/knowledgeReview";
 import { RewritePanel } from "../features/rewrite/RewritePanel";
 import {
   buildMaterialInputFromRewrite,
@@ -414,6 +419,21 @@ export function AppShell() {
     setRewriteLogs((current) => [log, ...current.filter((item) => item.id !== log.id)]);
   }, []);
 
+  const completeKnowledgeReview = useCallback((completion: KnowledgeReviewCompletion) => {
+    setReviewFocusId(null);
+    setLearningWorkspace((current) => applyKnowledgeReviewCompletion(current, completion));
+  }, []);
+
+  const createReviewMicroPractice = useCallback((reviewCardId: string) => {
+    const now = new Date();
+    const next = createMicroPracticeFromReview(learningWorkspace, reviewCardId, now);
+    const exerciseId = `exercise-review-${now.getTime()}`;
+    setLearningWorkspace(next);
+    if (next.exercises.some((item) => item.id === exerciseId)) {
+      setRoute(createAppRoute("practice", exerciseId));
+    }
+  }, [learningWorkspace]);
+
   const saveRewriteAsMaterial = useCallback((log: RewriteLog) => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
@@ -435,6 +455,12 @@ export function AppShell() {
     setRewriteFocusId(null);
     setState((current) => createMaterialFromAnswerDraft(current, input));
     setRoute(createAppRoute("library"));
+  }, []);
+
+  const openKnowledgeCardInLibrary = useCallback((cardId: string) => {
+    setLibrarySection("cards");
+    setReviewFocusId(null);
+    setRoute(createAppRoute("library", cardId));
   }, []);
 
   const createPractice = useCallback(() => {
@@ -712,12 +738,16 @@ export function AppShell() {
         />
       ) : view === "review" ? (
         <ReviewPanel
+          workspace={learningWorkspace}
           materials={activeMaterials}
           reviewLogs={reviewLogs}
           focusedMaterialId={reviewFocusId}
           onRate={rateMaterial}
           onBackToLibrary={openLibrary}
           onEditMaterial={openMaterialInLibrary}
+          onCompleteKnowledgeReview={completeKnowledgeReview}
+          onEditKnowledgeCard={openKnowledgeCardInLibrary}
+          onCreateMicroPractice={createReviewMicroPractice}
         />
       ) : view === "rewrite" ? (
         <RewritePanel
@@ -737,6 +767,7 @@ export function AppShell() {
           reviewLogs={reviewLogs}
           onOpenPractice={openPractice}
           onOpenReview={openReview}
+          onOpenKnowledgeCard={openKnowledgeCardInLibrary}
         />
       ) : view === "taxonomy" ? (
         <TaxonomyPanel materials={state.materials} />

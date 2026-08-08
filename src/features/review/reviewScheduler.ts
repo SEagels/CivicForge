@@ -44,7 +44,7 @@ export function applyReviewRating(
   now: Date = new Date(),
 ): MaterialDraft {
   const baseSchedule = readReviewSchedule(material);
-  const nextSchedule = scheduleByRating(baseSchedule, rating, now);
+  const nextSchedule = calculateNextReviewSchedule(baseSchedule, rating, now);
 
   return {
     ...material,
@@ -72,7 +72,11 @@ function isDueAt(material: MaterialDraft, deadline: Date): boolean {
   return Date.parse(material.nextReviewAt) <= deadline.getTime();
 }
 
-function scheduleByRating(schedule: ReviewSchedule, rating: ReviewRating, now: Date): ReviewSchedule {
+export function calculateNextReviewSchedule(
+  schedule: ReviewSchedule,
+  rating: ReviewRating,
+  now: Date = new Date(),
+): ReviewSchedule {
   if (rating === "again") {
     return {
       reviewEase: lowerEase(schedule.reviewEase, 0.2),

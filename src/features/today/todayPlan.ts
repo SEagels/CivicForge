@@ -1,9 +1,4 @@
-import type {
-  LearningWorkspaceState,
-  StudySession,
-  StudySessionItem,
-  StudyTask,
-} from "../../domain/learning";
+import type { LearningWorkspaceState, StudySession, StudySessionItem, StudyTask } from "../../domain/learning";
 import type { MaterialDraft } from "../materials/materialModel";
 
 export type StudyPlanMinutes = 15 | 30 | 60;
@@ -14,20 +9,43 @@ export function buildTodayTasks(
   now: Date = new Date(),
 ): readonly StudyTask[] {
   const nowMs = now.getTime();
-  const reviews = materials
-    .filter((item) => item.status === "active" && item.reviewEnabled)
+  const cards = new Map(workspace.cards.map((card) => [card.id, card]));
+  const knowledgeReviews = workspace.reviewCards
     .filter((item) => item.nextReviewAt === null || Date.parse(item.nextReviewAt) <= nowMs)
+    .filter((item) => {
+      const card = cards.get(item.knowledgeCardId);
+      return card?.reviewEnabled && card.verificationStatus !== "unverified" && card.lifecycle !== "archived";
+    })
     .slice(0, 12)
-    .map((item, index): StudyTask => ({
-      id: `review-${item.id}`,
-      kind: "review",
-      title: `回忆：${item.title}`,
-      description: item.excerpt || "先回忆要点，再揭示答案。",
-      estimatedMinutes: 3,
-      entityId: item.id,
-      priority: 100 - index,
-      status: "pending",
-    }));
+    .map((item, index): StudyTask => {
+      const card = cards.get(item.knowledgeCardId)!;
+      return {
+        id: `review-${item.id}`,
+        kind: "review",
+        title: `回忆：${card.title}`,
+        description: item.promptMd || "先主动回忆，再揭示答案。",
+        estimatedMinutes: item.mode === "micro-writing" ? 8 : 3,
+        entityId: item.id,
+        priority: 110 - index,
+        status: "pending",
+      };
+    });
+  const legacyReviews = workspace.reviewCards.length === 0
+    ? materials
+      .filter((item) => item.status === "active" && item.reviewEnabled)
+      .filter((item) => item.nextReviewAt === null || Date.parse(item.nextReviewAt) <= nowMs)
+      .slice(0, 12)
+      .map((item, index): StudyTask => ({
+        id: `review-${item.id}`,
+        kind: "review",
+        title: `回忆：${item.title}`,
+        description: item.excerpt || "先回忆要点，再揭示答案。",
+        estimatedMinutes: 3,
+        entityId: item.id,
+        priority: 100 - index,
+        status: "pending",
+      }))
+    : [];
   const practices = workspace.exercises
     .filter((item) => item.status === "active" || item.status === "draft")
     .slice(0, 4)
@@ -68,9 +86,8 @@ export function buildTodayTasks(
       status: "pending",
     }));
 
-  return [...reviews, ...practices, ...reflections, ...intake].sort(
-    (left, right) => right.priority - left.priority,
-  );
+  return [...knowledgeReviews, ...legacyReviews, ...practices, ...reflections, ...intake]
+    .sort((left, right) => right.priority - left.priority);
 }
 
 export function createStudySession(
