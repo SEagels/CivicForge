@@ -12,11 +12,28 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "CivicForge",
         "width": 1280,
         "height": 820,
         "minWidth": 720,
         "minHeight": 620
+      },
+      {
+        "label": "study-widget",
+        "title": "CivicForge 学习小组件",
+        "url": "index.html?widget=1",
+        "width": 340,
+        "height": 220,
+        "minWidth": 300,
+        "minHeight": 180,
+        "maxWidth": 440,
+        "maxHeight": 360,
+        "visible": false,
+        "decorations": false,
+        "resizable": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true
       }
     ],
     "security": {

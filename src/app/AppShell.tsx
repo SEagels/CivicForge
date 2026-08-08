@@ -1,37 +1,61 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { ReviewRating } from "../../domain/enums";
-import { AnswerWorkbenchPanel } from "../answer/AnswerWorkbenchPanel";
-import type { AnswerMaterialInput, AnswerRewriteDraft } from "../answer/answerWorkbench";
-import { createAppDataService, type AppDataService, type StorageMode } from "../appData/appDataService";
-import { DashboardPanel } from "../dashboard/DashboardPanel";
-import { MarkdownEditor } from "../editor/MarkdownEditor";
-import { GraphPanel } from "../graph/GraphPanel";
-import { readArchiveFile, saveArchiveFile } from "../importExport/archiveFileAdapter";
+import type { ReviewRating } from "../domain/enums";
+import { AnswerWorkbenchPanel } from "../features/answer/AnswerWorkbenchPanel";
+import type { AnswerMaterialInput, AnswerRewriteDraft } from "../features/answer/answerWorkbench";
+import { createAppDataService, type AppDataService, type StorageMode } from "../features/appData/appDataService";
+import { DashboardPanel } from "../features/dashboard/DashboardPanel";
+import {
+  EMPTY_LEARNING_WORKSPACE,
+  type KnowledgeCard,
+  type LearningWorkspaceState,
+  type SourceDocument,
+  type StudyTask,
+} from "../domain/learning";
+import { MarkdownEditor } from "../features/editor/MarkdownEditor";
+import { GraphPanel } from "../features/graph/GraphPanel";
+import { readArchiveFile, saveArchiveFile } from "../features/importExport/archiveFileAdapter";
 import {
   createAppArchive,
   createArchiveFilename,
   parseAppArchive,
   serializeAppArchive,
-} from "../importExport/appArchive";
-import { ImportExportPanel } from "../importExport/ImportExportPanel";
-import { applyReviewRating, readReviewSchedule } from "../review/reviewScheduler";
-import { buildReviewLogEntry, type CompletedReviewSessionState, type ReviewLog } from "../review/reviewSession";
-import { ReviewPanel } from "../review/ReviewPanel";
-import { RewritePanel } from "../rewrite/RewritePanel";
-import { buildMaterialInputFromRewrite, type RewriteLog, type RewriteMaterialInput } from "../rewrite/rewriteWorkshop";
-import { DEFAULT_APP_SETTINGS, applyThemeMode, type AppSettings } from "../settings/appSettings";
-import { SettingsPanel } from "../settings/SettingsPanel";
-import { TaxonomyPanel } from "../taxonomy/TaxonomyPanel";
-import { MaterialInspector } from "./MaterialInspector";
-import { MaterialList } from "./MaterialList";
-import { getNextIntakeMaterialId } from "./intakeAssistant";
+} from "../features/importExport/appArchive";
+import { ImportExportPanel } from "../features/importExport/ImportExportPanel";
+import { applyReviewRating, readReviewSchedule } from "../features/review/reviewScheduler";
+import {
+  buildReviewLogEntry,
+  type CompletedReviewSessionState,
+  type ReviewLog,
+} from "../features/review/reviewSession";
+import { ReviewPanel } from "../features/review/ReviewPanel";
+import { RewritePanel } from "../features/rewrite/RewritePanel";
+import {
+  buildMaterialInputFromRewrite,
+  type RewriteLog,
+  type RewriteMaterialInput,
+} from "../features/rewrite/rewriteWorkshop";
+import { DEFAULT_APP_SETTINGS, applyThemeMode, type AppSettings } from "../features/settings/appSettings";
+import { SettingsPanel } from "../features/settings/SettingsPanel";
+import { TaxonomyPanel } from "../features/taxonomy/TaxonomyPanel";
+import { TodayPanel } from "../features/today/TodayPanel";
+import { createStudySession, type StudyPlanMinutes } from "../features/today/todayPlan";
+import { PracticePanel } from "../features/practice/PracticePanel";
+import { createExercise } from "../features/practice/practiceModel";
+import { ProgressPanel } from "../features/progress/ProgressPanel";
+import {
+  KnowledgeHubPanel,
+  type LibrarySection,
+} from "../features/learning/KnowledgeHubPanel";
+import { MaterialInspector } from "../features/materials/MaterialInspector";
+import { MaterialList } from "../features/materials/MaterialList";
+import { getNextIntakeMaterialId } from "../features/materials/intakeAssistant";
 import {
   DEFAULT_MATERIAL_FILTERS,
   filterMaterials,
   getAvailableTags,
   hasActiveFilters,
   type MaterialFilters,
-} from "./materialFilters";
+} from "../features/materials/materialFilters";
 import {
   archiveSelectedMaterial,
   confirmSelectedMaterial,
@@ -47,35 +71,39 @@ import {
   selectMaterial,
   updateSelectedMaterial,
   type MaterialPatch,
-} from "./materialModel";
-import { formatMaterialSaveStatus, type MaterialSaveStatus } from "./materialSaveStatus";
-import { getMaterialDuplicateHints } from "./materialQuality";
-import { getWorkbenchCandidates, getWorkbenchStats } from "./materialWorkbench";
-
-type AppView =
-  | "dashboard"
-  | "library"
-  | "answer"
-  | "review"
-  | "rewrite"
-  | "graph"
-  | "taxonomy"
-  | "importExport"
-  | "settings";
+} from "../features/materials/materialModel";
+import {
+  formatMaterialSaveStatus,
+  type MaterialSaveStatus,
+} from "../features/materials/materialSaveStatus";
+import { getMaterialDuplicateHints } from "../features/materials/materialQuality";
+import { getWorkbenchCandidates, getWorkbenchStats } from "../features/materials/materialWorkbench";
+import { CommandPalette, type AppCommand } from "./CommandPalette";
+import {
+  createAppRoute,
+  getRouteStorage,
+  loadStoredAppRoute,
+  saveStoredAppRoute,
+  type AppRouteId,
+} from "./appRoute";
 
 const STORAGE_MODE_PREVIEW = "Preview localStorage";
 
-export function MaterialLibrary() {
+export function AppShell() {
   const [state, setState] = useState(createInitialMaterialState);
   const [filters, setFilters] = useState<MaterialFilters>(DEFAULT_MATERIAL_FILTERS);
-  const [view, setView] = useState<AppView>("dashboard");
+  const [route, setRoute] = useState(() => loadStoredAppRoute(getRouteStorage()));
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [reviewFocusId, setReviewFocusId] = useState<string | null>(null);
   const [rewriteFocusId, setRewriteFocusId] = useState<string | null>(null);
   const [answerRewriteDraft, setAnswerRewriteDraft] = useState<AnswerRewriteDraft | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>(STORAGE_MODE_PREVIEW);
+  const [storageError, setStorageError] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [reviewLogs, setReviewLogs] = useState<readonly ReviewLog[]>([]);
   const [rewriteLogs, setRewriteLogs] = useState<readonly RewriteLog[]>([]);
+  const [learningWorkspace, setLearningWorkspace] = useState<LearningWorkspaceState>(EMPTY_LEARNING_WORKSPACE);
+  const [librarySection, setLibrarySection] = useState<LibrarySection>("outputs");
   const [materialSaveStatus, setMaterialSaveStatus] = useState<MaterialSaveStatus>({ kind: "loading" });
   const dataServiceRef = useRef<AppDataService | null>(null);
   const hydratedRef = useRef(false);
@@ -108,10 +136,12 @@ export function MaterialLibrary() {
           reviewLogs,
           rewriteLogs,
           settings,
+          learningWorkspace,
         }),
       ),
-    [reviewLogs, rewriteLogs, settings, state],
+    [learningWorkspace, reviewLogs, rewriteLogs, settings, state],
   );
+  const view = route.id;
 
   useEffect(() => {
     let cancelled = false;
@@ -129,7 +159,9 @@ export function MaterialLibrary() {
       setReviewLogs(snapshot.reviewLogs);
       setRewriteLogs(snapshot.rewriteLogs);
       setSettings(snapshot.settings);
+      setLearningWorkspace(snapshot.learningWorkspace);
       setStorageMode(snapshot.storageMode);
+      setStorageError(snapshot.storageError);
       hydratedRef.current = true;
       setMaterialSaveStatus({ kind: "saved", savedAt: new Date().toISOString() });
     }
@@ -185,6 +217,16 @@ export function MaterialLibrary() {
   }, [rewriteLogs]);
 
   useEffect(() => {
+    if (!hydratedRef.current) {
+      return;
+    }
+
+    void dataServiceRef.current?.saveLearningWorkspace(learningWorkspace).catch((error) => {
+      console.warn("Unable to save CivicForge learning workspace.", error);
+    });
+  }, [learningWorkspace]);
+
+  useEffect(() => {
     applyThemeMode(settings);
 
     if (!hydratedRef.current) {
@@ -195,6 +237,63 @@ export function MaterialLibrary() {
       console.warn("Unable to save CivicForge settings.", error);
     });
   }, [settings]);
+
+  useEffect(() => {
+    saveStoredAppRoute(getRouteStorage(), route);
+  }, [route]);
+
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in globalThis)) {
+      return;
+    }
+
+    let disposed = false;
+    const unlisteners: Array<() => void> = [];
+    void import("@tauri-apps/api/event").then(async ({ listen }) => {
+      const unlistenRoute = await listen<{
+        route: AppRouteId;
+        entityId: string | null;
+        librarySection: Exclude<LibrarySection, "outputs"> | null;
+      }>(
+        "widget-open-route",
+        ({ payload }) => {
+          if (disposed) return;
+          if (payload.route === "library" && payload.librarySection) {
+            setLibrarySection(payload.librarySection);
+          }
+          setRoute(createAppRoute(payload.route, payload.entityId));
+          if (payload.route === "review") setReviewFocusId(payload.entityId);
+        },
+      );
+      const unlistenEntity = await listen("entity-changed", () => {
+        void dataServiceRef.current?.load().then((snapshot) => {
+          if (!disposed) setLearningWorkspace(snapshot.learningWorkspace);
+        });
+      });
+      unlisteners.push(unlistenRoute, unlistenEntity);
+    });
+
+    return () => {
+      disposed = true;
+      unlisteners.forEach((unlisten) => unlisten());
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === "k") {
+        event.preventDefault();
+        setCommandPaletteOpen((current) => !current);
+      }
+
+      if (event.key === "Escape") {
+        setCommandPaletteOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalShortcut);
+    return () => window.removeEventListener("keydown", handleGlobalShortcut);
+  }, []);
 
   const updateSelected = useCallback((patch: MaterialPatch) => {
     setState((current) => updateSelectedMaterial(current, patch));
@@ -214,7 +313,7 @@ export function MaterialLibrary() {
   const createVisibleMaterial = useCallback(() => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
-    setView("library");
+    setRoute(createAppRoute("library"));
     setState((current) => createMaterial(current));
   }, []);
 
@@ -224,8 +323,8 @@ export function MaterialLibrary() {
     setState(createInitialMaterialState());
   }, []);
 
-  const openView = useCallback((nextView: AppView) => {
-    setView(nextView);
+  const openView = useCallback((nextView: AppRouteId, entityId: string | null = null) => {
+    setRoute(createAppRoute(nextView, entityId));
     setReviewFocusId(null);
     if (nextView !== "rewrite") {
       setRewriteFocusId(null);
@@ -234,7 +333,11 @@ export function MaterialLibrary() {
   }, []);
 
   const openLibrary = useCallback(() => openView("library"), [openView]);
-  const openAnswer = useCallback(() => openView("answer"), [openView]);
+  const openLibrarySection = useCallback((section: LibrarySection) => {
+    setLibrarySection(section);
+    openView("library");
+  }, [openView]);
+  const openPractice = useCallback(() => openView("practice"), [openView]);
   const openReview = useCallback(() => openView("review"), [openView]);
   const openRewrite = useCallback(() => {
     setRewriteFocusId(null);
@@ -247,20 +350,21 @@ export function MaterialLibrary() {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
     setState((current) => selectMaterial(current, materialId));
-    setView("library");
+    setRoute(createAppRoute("library", materialId));
   }, []);
 
   const openMaterialInLibrary = useCallback((materialId: string) => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
     setRewriteFocusId(null);
+    setLibrarySection("outputs");
     setState((current) => selectMaterial(current, materialId));
-    setView("library");
+    setRoute(createAppRoute("library", materialId));
   }, []);
 
   const startSelectedReview = useCallback(() => {
     setReviewFocusId(state.selectedId);
-    setView("review");
+    setRoute(createAppRoute("review", state.selectedId));
   }, [state.selectedId]);
 
   const startSelectedRewrite = useCallback(() => {
@@ -271,7 +375,7 @@ export function MaterialLibrary() {
     setRewriteFocusId(state.selectedId);
     setAnswerRewriteDraft(null);
     setReviewFocusId(null);
-    setView("rewrite");
+    setRoute(createAppRoute("rewrite", state.selectedId));
   }, [state.selectedId]);
 
   const confirmSelected = useCallback(() => {
@@ -315,14 +419,14 @@ export function MaterialLibrary() {
     setReviewFocusId(null);
     setRewriteFocusId(null);
     setState((current) => createMaterialFromRewrite(current, buildMaterialInputFromRewrite(log)));
-    setView("library");
+    setRoute(createAppRoute("library"));
   }, []);
 
   const saveSourceAsMaterial = useCallback((input: RewriteMaterialInput) => {
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
     setState((current) => createMaterialFromSource(current, input));
-    setView("library");
+    setRoute(createAppRoute("library"));
   }, []);
 
   const saveAnswerDraftAsMaterial = useCallback((input: AnswerMaterialInput) => {
@@ -330,14 +434,95 @@ export function MaterialLibrary() {
     setReviewFocusId(null);
     setRewriteFocusId(null);
     setState((current) => createMaterialFromAnswerDraft(current, input));
-    setView("library");
+    setRoute(createAppRoute("library"));
+  }, []);
+
+  const createPractice = useCallback(() => {
+    const created = createExercise();
+    setLearningWorkspace((current) => ({
+      ...current,
+      exercises: [created.exercise, ...current.exercises],
+      attempts: [created.attempt, ...current.attempts],
+    }));
+    setRoute(createAppRoute("practice", created.exercise.id));
+  }, []);
+
+  const startStudyPlan = useCallback((minutes: StudyPlanMinutes, tasks: readonly StudyTask[]) => {
+    const created = createStudySession(tasks, minutes);
+    setLearningWorkspace((current) => ({
+      ...current,
+      sessions: [created.session, ...current.sessions.filter((item) => item.status !== "active")],
+      sessionItems: [...created.items, ...current.sessionItems.filter((item) => item.sessionId !== created.session.id)],
+    }));
+    const first = created.items[0]?.task;
+    if (first) {
+      openStudyTask(first);
+    }
+  }, []);
+
+  const quickCapture = useCallback((text: string) => {
+    const now = new Date();
+    const source: SourceDocument = {
+      id: `source-${now.getTime()}`,
+      title: text.trim().split(/\r?\n/)[0]?.slice(0, 40) || "快速记录",
+      sourceType: "note",
+      contentMd: text.trim(),
+      sourceUri: "",
+      publisher: "",
+      publishedAt: null,
+      status: "draft",
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    setLearningWorkspace((current) => ({ ...current, sources: [source, ...current.sources] }));
+  }, []);
+
+  const extractAttemptCard = useCallback((attemptId: string, contentMd: string) => {
+    const now = new Date();
+    const attempt = learningWorkspace.attempts.find((item) => item.id === attemptId);
+    const exercise = learningWorkspace.exercises.find((item) => item.id === attempt?.exerciseId);
+    const card: KnowledgeCard = {
+      id: `card-${now.getTime()}`,
+      title: `${exercise?.title || "练习"}：修改稿提炼`,
+      contentMd,
+      summary: contentMd.replace(/\s+/g, " ").slice(0, 100),
+      cardType: "standard-expression",
+      topicSlug: "",
+      lifecycle: "refining",
+      verificationStatus: "unverified",
+      core: false,
+      reviewEnabled: false,
+      sourceLabel: "训练复盘",
+      tagNames: ["训练提取"],
+      questionTypeSlugs: exercise ? [exercise.questionTypeSlug] : [],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    setLearningWorkspace((current) => ({
+      ...current,
+      cards: [card, ...current.cards],
+      cardSources: [{ cardId: card.id, sourceDocumentId: null, sourceExcerptId: null, attemptId, relationType: "extracted-from", createdAt: now.toISOString() }, ...current.cardSources],
+    }));
+  }, [learningWorkspace.attempts, learningWorkspace.exercises]);
+
+  const openStudyTask = useCallback((task: StudyTask) => {
+    if (task.kind === "review" && task.entityId) {
+      setReviewFocusId(task.entityId);
+      setRoute(createAppRoute("review", task.entityId));
+      return;
+    }
+    if ((task.kind === "practice" || task.kind === "reflection") && task.entityId) {
+      setRoute(createAppRoute("practice", task.entityId));
+      return;
+    }
+    setRoute(createAppRoute("library", task.entityId));
   }, []);
 
   const sendAnswerDraftToRewrite = useCallback((draft: AnswerRewriteDraft) => {
     setReviewFocusId(null);
     setRewriteFocusId(null);
     setAnswerRewriteDraft(draft);
-    setView("rewrite");
+    setRoute(createAppRoute("rewrite"));
   }, []);
 
   const downloadArchive = useCallback(() => {
@@ -357,9 +542,10 @@ export function MaterialLibrary() {
     setReviewLogs(archive.reviewLogs);
     setRewriteLogs(archive.rewriteLogs);
     setSettings(archive.settings);
+    setLearningWorkspace(archive.learningWorkspace);
     setFilters(DEFAULT_MATERIAL_FILTERS);
     setReviewFocusId(null);
-    setView("dashboard");
+    setRoute(createAppRoute("today"));
     return true;
   }, []);
 
@@ -373,23 +559,51 @@ export function MaterialLibrary() {
     return restoreArchive(result.content);
   }, [restoreArchive]);
 
+  const commands = useMemo<readonly AppCommand[]>(
+    () => [
+      { id: "today", label: "今天", hint: "打开今日学习计划", keywords: ["Dashboard"], run: () => openView("today") },
+      { id: "practice", label: "训练", hint: "打开申论训练工作台", keywords: ["答题", "调用"], run: openPractice },
+      { id: "library", label: "素材", hint: "打开资料与知识卡片", keywords: ["素材库"], run: openLibrary },
+      { id: "review", label: "复习", hint: "开始主动回忆", keywords: ["Anki"], run: openReview },
+      { id: "progress", label: "进度", hint: "查看主题与题型覆盖", keywords: ["统计"], run: () => openView("progress") },
+      { id: "new-material", label: "新建素材", hint: "创建一条待加工素材", keywords: ["记录"], run: createVisibleMaterial },
+      { id: "rewrite", label: "Rewrite 工具", hint: "打开旧版改写工坊", keywords: ["改写"], run: openRewrite },
+      { id: "graph", label: "知识图谱", hint: "打开旧版关系图", keywords: ["关联"], run: () => openView("graph") },
+      { id: "import", label: "导入导出", hint: "备份或恢复本地数据", keywords: ["备份"], run: openImportExport },
+      { id: "settings", label: "设置", hint: "主题、存储和小组件", keywords: ["偏好"], run: () => openView("settings") },
+    ],
+    [createVisibleMaterial, openImportExport, openLibrary, openPractice, openReview, openRewrite, openView],
+  );
+
   return (
     <main className="desktop-shell">
       <aside className="sidebar" aria-label="主导航">
         <div className="brand">CivicForge</div>
         <nav>
-          <NavButton active={view === "dashboard"} onClick={() => openView("dashboard")}>
-            Dashboard
+          <div className="navigation-section-label">学习</div>
+          <NavButton active={view === "today"} onClick={() => openView("today")}>
+            今天
+          </NavButton>
+          <NavButton active={view === "practice"} onClick={openPractice}>
+            训练
           </NavButton>
           <NavButton active={view === "library"} onClick={openLibrary}>
-            素材库
+            素材
           </NavButton>
-          <NavButton active={view === "answer"} onClick={openAnswer}>
-            调用工作台
-          </NavButton>
+          {view === "library" ? (
+            <div className="sidebar-subnav">
+              <button type="button" className={librarySection === "sources" ? "active" : ""} onClick={() => openLibrarySection("sources")}>资料收件箱</button>
+              <button type="button" className={librarySection === "cards" ? "active" : ""} onClick={() => openLibrarySection("cards")}>知识卡</button>
+              <button type="button" className={librarySection === "outputs" ? "active" : ""} onClick={() => openLibrarySection("outputs")}>成品</button>
+            </div>
+          ) : null}
           <NavButton active={view === "review"} onClick={openReview}>
             复习
           </NavButton>
+          <NavButton active={view === "progress"} onClick={() => openView("progress")}>
+            进度
+          </NavButton>
+          <div className="navigation-section-label">工具</div>
           <NavButton active={view === "rewrite"} onClick={openRewrite}>
             Rewrite
           </NavButton>
@@ -397,26 +611,34 @@ export function MaterialLibrary() {
             知识图谱
           </NavButton>
           <NavButton active={view === "taxonomy"} onClick={() => openView("taxonomy")}>
-            主题标签
+            主题标签（旧版）
           </NavButton>
           <NavButton active={view === "importExport"} onClick={openImportExport}>
             导入导出
           </NavButton>
           <NavButton active={view === "settings"} onClick={() => openView("settings")}>
-            设置备份
+            设置
           </NavButton>
         </nav>
       </aside>
 
-      {view === "dashboard" ? (
-        <DashboardPanel
+      {view === "today" ? (
+        <TodayPanel
           materials={state.materials}
-          rewriteLogs={rewriteLogs}
+          workspace={learningWorkspace}
           storageMode={storageMode}
-          onOpenLibrary={createVisibleMaterial}
-          onOpenReview={openReview}
-          onOpenRewrite={openRewrite}
-          onOpenImportExport={openImportExport}
+          storageError={storageError}
+          onStartPlan={startStudyPlan}
+          onOpenTask={openStudyTask}
+          onQuickCapture={quickCapture}
+        />
+      ) : view === "library" && librarySection !== "outputs" ? (
+        <KnowledgeHubPanel
+          section={librarySection}
+          focusedId={route.entityId}
+          workspace={learningWorkspace}
+          onSectionChange={openLibrarySection}
+          onChange={setLearningWorkspace}
         />
       ) : view === "library" ? (
         <>
@@ -480,11 +702,13 @@ export function MaterialLibrary() {
             onResetExamples={resetExampleMaterials}
           />
         </>
-      ) : view === "answer" ? (
-        <AnswerWorkbenchPanel
-          materials={activeMaterials}
-          onSaveDraftAsMaterial={saveAnswerDraftAsMaterial}
-          onSendToRewrite={sendAnswerDraftToRewrite}
+      ) : view === "practice" ? (
+        <PracticePanel
+          workspace={learningWorkspace}
+          focusedExerciseId={route.entityId}
+          onChange={setLearningWorkspace}
+          onCreate={createPractice}
+          onExtractCard={extractAttemptCard}
         />
       ) : view === "review" ? (
         <ReviewPanel
@@ -506,6 +730,14 @@ export function MaterialLibrary() {
         />
       ) : view === "graph" ? (
         <GraphPanel materials={activeMaterials} onOpenMaterial={openMaterialFromGraph} />
+      ) : view === "progress" ? (
+        <ProgressPanel
+          materials={state.materials}
+          workspace={learningWorkspace}
+          reviewLogs={reviewLogs}
+          onOpenPractice={openPractice}
+          onOpenReview={openReview}
+        />
       ) : view === "taxonomy" ? (
         <TaxonomyPanel materials={state.materials} />
       ) : view === "importExport" ? (
@@ -528,6 +760,7 @@ export function MaterialLibrary() {
           onResetExamples={resetExampleMaterials}
         />
       )}
+      <CommandPalette open={commandPaletteOpen} commands={commands} onClose={() => setCommandPaletteOpen(false)} />
     </main>
   );
 }

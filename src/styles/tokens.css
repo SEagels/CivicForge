@@ -1,0 +1,15 @@
+:root {
+  --cf-sidebar-width: 196px;
+  --cf-content-gap: 20px;
+  --cf-focus-ring: 0 0 0 3px rgba(38, 112, 96, 0.18);
+  --cf-transition-fast: 140ms ease;
+  --cf-transition-normal: 200ms ease;
+  --cf-overlay: rgba(20, 28, 26, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --cf-transition-fast: 0ms;
+    --cf-transition-normal: 0ms;
+  }
+}

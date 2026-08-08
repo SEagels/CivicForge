@@ -1,8 +1,9 @@
 import { BUILTIN_QUESTION_TYPES, BUILTIN_TOPICS } from "../../domain/seeds";
-import type { CivicForgeDatabase } from "./databaseClient";
+import { isTauriRuntimeAvailable, type CivicForgeDatabase } from "./databaseClient";
 import { DATABASE_MIGRATIONS } from "./migrations";
 
-export const MIGRATION_VERSION_SELECT_SQL = "SELECT version FROM schema_migrations ORDER BY version ASC;";
+export const MIGRATION_VERSION_SELECT_SQL =
+  "SELECT version, checksum FROM schema_migrations ORDER BY version ASC;";
 
 export const MIGRATION_TABLE_SQL =
   "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, checksum TEXT NOT NULL DEFAULT '', applied_at TEXT NOT NULL);";
@@ -36,28 +37,85 @@ ON CONFLICT(slug) DO UPDATE SET
 
 interface AppliedMigrationRow {
   readonly version: number;
+  readonly checksum?: string;
 }
 
 export async function initializeCivicForgeDatabase(db: CivicForgeDatabase, now: Date = new Date()): Promise<void> {
   await db.execute(MIGRATION_TABLE_SQL);
   const appliedRows = await db.select<AppliedMigrationRow[]>(MIGRATION_VERSION_SELECT_SQL);
-  const appliedVersions = new Set(appliedRows.map((row) => row.version));
+  const appliedMigrations = new Map(appliedRows.map((row) => [row.version, row]));
 
   for (const migration of DATABASE_MIGRATIONS) {
-    if (appliedVersions.has(migration.version)) {
+    const appliedMigration = appliedMigrations.get(migration.version);
+
+    if (appliedMigration) {
+      const expectedChecksum = createMigrationChecksum(migration.sql);
+
+      if (appliedMigration.checksum && appliedMigration.checksum !== expectedChecksum) {
+        throw new Error(
+          `Migration ${migration.version} (${migration.name}) checksum does not match the applied database.`,
+        );
+      }
       continue;
     }
 
-    await executeSqlBatch(db, migration.sql);
+    await applyMigration(db, migration, now);
+  }
+
+  await seedBuiltinTaxonomy(db, now);
+}
+
+async function applyMigration(
+  db: CivicForgeDatabase,
+  migration: (typeof DATABASE_MIGRATIONS)[number],
+  now: Date,
+): Promise<void> {
+  const statements = splitSqlStatements(migration.sql);
+  const pragmaStatements = statements.filter((statement) => /^PRAGMA\b/i.test(statement));
+  const transactionalStatements = statements.filter((statement) => !/^PRAGMA\b/i.test(statement));
+
+  for (const statement of pragmaStatements) {
+    await db.execute(statement);
+  }
+
+  if (isTauriRuntimeAvailable(globalThis)) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("apply_database_migration", {
+      statements: transactionalStatements,
+      version: migration.version,
+      name: migration.name,
+      checksum: createMigrationChecksum(migration.sql),
+      appliedAt: now.toISOString(),
+    });
+    return;
+  }
+
+  await db.execute("BEGIN IMMEDIATE;");
+
+  try {
+    for (const statement of transactionalStatements) {
+      await db.execute(statement);
+    }
+
     await db.execute(MIGRATION_RECORD_SQL, [
       migration.version,
       migration.name,
       createMigrationChecksum(migration.sql),
       now.toISOString(),
     ]);
+    await db.execute("COMMIT;");
+  } catch (error) {
+    await rollbackMigration(db);
+    throw error;
   }
+}
 
-  await seedBuiltinTaxonomy(db, now);
+async function rollbackMigration(db: CivicForgeDatabase): Promise<void> {
+  try {
+    await db.execute("ROLLBACK;");
+  } catch {
+    // Preserve the original migration error when SQLite already rolled back.
+  }
 }
 
 export async function seedBuiltinTaxonomy(db: CivicForgeDatabase, now: Date = new Date()): Promise<void> {

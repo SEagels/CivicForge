@@ -102,6 +102,45 @@ describe("app data service", () => {
     expect(rewriteRepository.replacedLogs).toEqual([]);
     expect(settingsRepository.savedSettings).toEqual({ themeMode: "light", backupReminderEnabled: true });
   });
+
+  it("serializes repository writes that are requested at the same time", async () => {
+    const initialMaterials = createInitialMaterialState();
+    const materialRepository = createFakeMaterialRepository(initialMaterials.materials);
+    const settingsRepository = createFakeSettingsRepository();
+    let activeWrites = 0;
+    let maximumActiveWrites = 0;
+    const recordWrite = async () => {
+      activeWrites += 1;
+      maximumActiveWrites = Math.max(maximumActiveWrites, activeWrites);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      activeWrites -= 1;
+    };
+    materialRepository.saveMaterial = recordWrite;
+    settingsRepository.saveSettings = recordWrite;
+
+    const service = createAppDataService({
+      initialMaterialState: initialMaterials,
+      materialStorage: null,
+      reviewStorage: null,
+      rewriteStorage: null,
+      settingsStorage: null,
+      learningStorage: null,
+      loadDatabase: async () => createFakeDb(),
+      initializeDatabase: async () => undefined,
+      createMaterialRepository: () => materialRepository,
+      createReviewLogRepository: () => createFakeReviewRepository([]),
+      createRewriteLogRepository: () => createFakeRewriteRepository([]),
+      createSettingsRepository: () => settingsRepository,
+    });
+    await service.load();
+
+    await Promise.all([
+      service.saveMaterials(initialMaterials),
+      service.saveSettings({ themeMode: "dark", backupReminderEnabled: true }),
+    ]);
+
+    expect(maximumActiveWrites).toBe(1);
+  });
 });
 
 function createRewriteLog(): RewriteLog {

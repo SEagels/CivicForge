@@ -1,4 +1,11 @@
 import { INITIAL_SCHEMA_SQL } from "./schema";
+import {
+  KNOWLEDGE_CARDS_MIGRATION_SQL,
+  LEARNING_SEARCH_MIGRATION_SQL,
+  MATERIALS_FTS_TRIGGER_FIX_SQL,
+  REVIEW_CARDS_MIGRATION_SQL,
+  SOURCE_AND_PRACTICE_MIGRATION_SQL,
+} from "./learningMigrations";
 
 export interface DatabaseMigration {
   readonly version: number;
@@ -37,5 +44,30 @@ CREATE INDEX IF NOT EXISTS idx_review_logs_mode_time ON review_logs(review_mode,
 CREATE INDEX IF NOT EXISTS idx_review_logs_topic_time ON review_logs(topic_slug, reviewed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_review_logs_material_type_time ON review_logs(material_type, reviewed_at DESC);
 `.trim(),
+  },
+  {
+    version: 4,
+    name: "source_and_practice",
+    sql: SOURCE_AND_PRACTICE_MIGRATION_SQL,
+  },
+  {
+    version: 5,
+    name: "knowledge_cards",
+    sql: KNOWLEDGE_CARDS_MIGRATION_SQL,
+  },
+  {
+    version: 6,
+    name: "review_cards_and_study_sessions",
+    sql: REVIEW_CARDS_MIGRATION_SQL,
+  },
+  {
+    version: 7,
+    name: "learning_search_v2",
+    sql: LEARNING_SEARCH_MIGRATION_SQL,
+  },
+  {
+    version: 8,
+    name: "fix_materials_fts_triggers",
+    sql: MATERIALS_FTS_TRIGGER_FIX_SQL,
   },
 ] as const satisfies readonly DatabaseMigration[];

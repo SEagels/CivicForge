@@ -5,20 +5,29 @@ import type { ReviewLog } from "../review/reviewSession";
 import type { RewriteLog } from "../rewrite/rewriteWorkshop";
 import { REWRITE_TARGET_IDS } from "../rewrite/rewriteWorkshop";
 import { THEME_MODES, type AppSettings } from "../settings/appSettings";
+import type { LearningWorkspaceState } from "../../domain/learning";
+import { createLearningWorkspaceFromMaterials } from "../learning/learningModel";
+import { normalizeLearningWorkspace } from "../learning/learningPersistence";
 
-export const CIVICFORGE_ARCHIVE_VERSION = 2;
+export const CIVICFORGE_ARCHIVE_VERSION = 3;
 
 export interface CivicForgeArchiveInput {
   readonly materialsState: MaterialState;
   readonly reviewLogs: readonly ReviewLog[];
   readonly rewriteLogs: readonly RewriteLog[];
   readonly settings: AppSettings;
+  readonly learningWorkspace?: LearningWorkspaceState;
 }
 
-export interface CivicForgeArchive extends CivicForgeArchiveInput {
+export interface CivicForgeArchive {
   readonly appName: "CivicForge";
   readonly version: typeof CIVICFORGE_ARCHIVE_VERSION;
   readonly exportedAt: string;
+  readonly materialsState: MaterialState;
+  readonly reviewLogs: readonly ReviewLog[];
+  readonly rewriteLogs: readonly RewriteLog[];
+  readonly settings: AppSettings;
+  readonly learningWorkspace: LearningWorkspaceState;
 }
 
 export function createAppArchive(input: CivicForgeArchiveInput, exportedAt: Date = new Date()): CivicForgeArchive {
@@ -30,6 +39,8 @@ export function createAppArchive(input: CivicForgeArchiveInput, exportedAt: Date
     reviewLogs: input.reviewLogs,
     rewriteLogs: input.rewriteLogs,
     settings: input.settings,
+    learningWorkspace:
+      input.learningWorkspace ?? createLearningWorkspaceFromMaterials(input.materialsState.materials),
   };
 }
 
@@ -42,6 +53,7 @@ export function parseAppArchive(raw: string): CivicForgeArchive | null {
     const payload = JSON.parse(raw) as Partial<Omit<CivicForgeArchive, "version" | "reviewLogs">> & {
       readonly version?: unknown;
       readonly reviewLogs?: unknown;
+      readonly learningWorkspace?: unknown;
     };
 
     if (payload.appName !== "CivicForge" || !isSupportedArchiveVersion(payload.version)) {
@@ -64,22 +76,51 @@ export function parseAppArchive(raw: string): CivicForgeArchive | null {
       return null;
     }
 
+    const materialsState = normalizeMaterialState(payload.materialsState);
+    const learningWorkspace =
+      payload.version === 3 && isLearningWorkspace(payload.learningWorkspace)
+        ? normalizeLearningWorkspace(payload.learningWorkspace)
+        : createLearningWorkspaceFromMaterials(materialsState.materials);
+
     return {
       appName: "CivicForge",
       version: CIVICFORGE_ARCHIVE_VERSION,
       exportedAt: payload.exportedAt,
-      materialsState: normalizeMaterialState(payload.materialsState),
+      materialsState,
       reviewLogs,
       rewriteLogs: payload.rewriteLogs,
       settings: payload.settings,
+      learningWorkspace,
     };
   } catch {
     return null;
   }
 }
 
-function isSupportedArchiveVersion(value: unknown): value is 1 | typeof CIVICFORGE_ARCHIVE_VERSION {
-  return value === 1 || value === CIVICFORGE_ARCHIVE_VERSION;
+function isSupportedArchiveVersion(value: unknown): value is 1 | 2 | typeof CIVICFORGE_ARCHIVE_VERSION {
+  return value === 1 || value === 2 || value === CIVICFORGE_ARCHIVE_VERSION;
+}
+
+function isLearningWorkspace(value: unknown): value is LearningWorkspaceState {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<LearningWorkspaceState>;
+  return [
+    candidate.sources,
+    candidate.excerpts,
+    candidate.exercises,
+    candidate.attempts,
+    candidate.revisions,
+    candidate.feedback,
+    candidate.cards,
+    candidate.cardSources,
+    candidate.cardUsages,
+    candidate.reviewCards,
+    candidate.sessions,
+    candidate.sessionItems,
+  ].every(Array.isArray);
 }
 
 export function createArchiveFilename(now: Date = new Date()): string {

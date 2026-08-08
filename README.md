@@ -1,58 +1,71 @@
-# CivicForge / 公考申论素材锻造台
+# CivicForge / 公考申论锻造台
 
-CivicForge is a local-first desktop app for civil-service essay preparation. It helps you collect essay materials, refine standard expressions, review them with a lightweight Anki-style schedule, and write in a Typora-like Markdown editor.
+CivicForge is a local-first Windows desktop workspace for civil-service essay study. Version 2.0 connects daily planning, writing practice, source collection, knowledge cards, active recall, and progress review in one local learning loop.
 
-CivicForge 是一个本地优先的公务员申论备考桌面应用，专注于整理申论素材、沉淀规范表达、进行轻量 Anki 式复习，并提供接近 Typora 的 Markdown 写作体验。
+CivicForge 是一款本地优先的 Windows 申论学习工作台。2.0 将今日计划、申论训练、资料整理、知识卡片、主动回忆和进度复盘连接成完整学习闭环。
 
-## Positioning / 产品定位
+## Product Scope / 产品范围
 
-- Local-first, single-user, desktop-oriented.
-- Built for essay material management, not question practice.
-- Data is local by default: SQLite in Tauri, localStorage in browser preview.
-- No account system, cloud sync, collaboration, question bank, wrong-answer system, graph view, or plugin marketplace.
+- Local-first, single-user, Windows desktop application.
+- Five primary workspaces: Today, Practice, Library, Review, and Progress.
+- SQLite is the source of truth in Tauri; browser preview uses `localStorage` only for development.
+- No account system, cloud sync, collaboration, question bank, wrong-answer system, or plugin marketplace.
+- Rewrite, graph, taxonomy, answer workbench, import/export, and settings remain available as Legacy tools while 2.0 workflows mature.
 
-- 本地优先、单人使用、桌面端体验优先。
-- 专门服务申论素材沉淀，不做刷题、错题或题库。
-- 数据默认保存在本地：Tauri 中使用 SQLite，浏览器预览中使用 localStorage。
-- 不做账号、云同步、多人协作、题库、错题系统、图谱视图和插件市场。
+- 本地优先、单人使用、面向 Windows 桌面端。
+- 五个一级工作区：今天、训练、素材、复习、进度。
+- Tauri 桌面端以 SQLite 为唯一真实数据源；浏览器预览仅在开发时使用 `localStorage`。
+- 不做账号、云同步、多人协作、题库、错题系统和插件市场。
+- Rewrite、知识图谱、主题标签、调用工作台、导入导出和设置暂作为 Legacy 工具保留，避免重构期间丢失能力。
+
+## Current 2.0 Foundation / 当前 2.0 基础能力
+
+- **Today / 今天**: 15、30、60 分钟学习计划，任务恢复和快速记录。
+- **Practice / 训练**: 资料阅读、提纲、作答、复盘修改四阶段训练。
+- **Library / 素材**: 资料收件箱、可追溯知识卡片和旧版成品素材。
+- **Review / 复习**: 主动回忆，显示答案后使用 Again / Hard / Good / Easy 评分。
+- **Progress / 进度**: 训练、知识卡、复习与弱项概览。
+- **Windows widget / 桌面小组件**: 今日任务、每日一卡、快速记录、隐私和紧凑模式。
+- **Data safety / 数据安全**: 事务迁移、失败回滚、archive v1/v2 兼容和 archive v3 导出恢复。
 
 ## Tech Stack / 技术栈
 
-- Tauri
-- React
-- TypeScript
-- Vite
-- SQLite with FTS5
+- Tauri 2 + Rust
+- React 19 + TypeScript + Vite
+- SQLite + FTS5
 - Milkdown Markdown editor
 - Vitest
 
 ## Prerequisites / 环境要求
 
-- Node.js 22+ or 24+
-- npm 11+
-- Rust and Cargo for native Tauri development/build
-- Microsoft Edge WebView2 Runtime on Windows
+- Node.js 22+ and npm 11+
+- Rust stable and Cargo
+- Microsoft Edge WebView2 Runtime
+- Windows 10/11 for native build and widget testing
 
-当前机器可以运行 Node/npm 层面的测试和构建。若要执行 `npm run tauri dev` 或 `npm run tauri build`，请先安装 Rust/Cargo，并确认 `rustc -V` 与 `cargo -V` 可以正常输出版本。
+确认以下命令可以正常输出版本：
 
-## Install / 安装
+```powershell
+node -v
+npm -v
+rustc -V
+cargo -V
+```
+
+## Install And Run / 安装与启动
 
 ```powershell
 cd D:\Projects\CivicForge
 npm install
 ```
 
-建议把项目放在全英文路径下，例如 `D:\Projects\CivicForge`，可以减少 Windows 上 Node/Rust 工具链遇到中文路径时的编码或构建问题。
-
-## Development / 开发启动
-
-Frontend preview:
+Frontend preview / 浏览器预览：
 
 ```powershell
 npm run dev
 ```
 
-Tauri desktop app:
+Tauri desktop development / 桌面开发模式：
 
 ```powershell
 npm run tauri dev
@@ -60,42 +73,28 @@ npm run tauri dev
 
 ## Build / 构建
 
-Web bundle:
-
 ```powershell
+npm run typecheck
 npm run build
-```
-
-Windows desktop package:
-
-```powershell
-npm run tauri build
-```
-
-Native Tauri build requires Rust/Cargo.
-
-Current Windows release artifacts are generated under:
-
-```text
-src-tauri/target/release/bundle/msi/CivicForge_0.1.0_x64_en-US.msi
-src-tauri/target/release/bundle/nsis/CivicForge_0.1.0_x64-setup.exe
-```
-
-If `cargo` is installed but not visible in the current PowerShell session, prepend Cargo to `PATH` before building:
-
-```powershell
-$env:PATH="$env:USERPROFILE\.cargo\bin;$env:PATH"
 npx tauri build
 ```
 
-当前 Windows 安装包会生成在以上 `src-tauri/target/release/bundle/` 目录中。若当前 PowerShell 找不到 `cargo`，请先把 Cargo 加入 `PATH`，再执行 `npx tauri build`。
+Windows installers are generated under `src-tauri/target/release/bundle/`.
+
+Windows 安装包生成在 `src-tauri/target/release/bundle/`：
+
+```text
+msi/CivicForge_0.1.0_x64_en-US.msi
+nsis/CivicForge_0.1.0_x64-setup.exe
+```
 
 ## Test / 测试
 
 ```powershell
-npm test -- --run
+npx vitest run --reporter=verbose
 npm run typecheck
 npm run build
+npx tauri build
 ```
 
 ## Directory Structure / 目录结构
@@ -103,90 +102,50 @@ npm run build
 ```text
 CivicForge/
   src/
-    app/                 React app shell
-    domain/              Built-in essay taxonomy and shared domain types
+    app/                 typed routes, app shell, command palette
+    domain/              legacy and 2.0 domain types
     features/
-      dashboard/         Study dashboard and quick actions
-      editor/            Milkdown Markdown editing surface
-      importExport/      JSON archive export and restore helpers/UI
-      materials/         Material library, filters, repository, persistence
-      review/            Lightweight Anki-style scheduler and UI
-      rewrite/           Template-based rewrite workshop and history
-      settings/          Local settings, theme mode, backup preferences
-      taxonomy/          Topic/type/question/tag statistics and UI
-    lib/db/              SQLite schema, migrations, Tauri SQL client
-    styles/              Global desktop styles
-  src-tauri/             Tauri native shell, permissions, plugin config
-  docs/                  Database, backup, and Superpowers plans
-  README.md              Bilingual project guide
+      today/             study plans and sessions
+      practice/          four-stage writing practice
+      learning/          sources, knowledge cards, repositories
+      review/            active recall and review history
+      progress/          traceable learning summaries
+      widget/            Windows desktop widget frontend
+      materials/         legacy finished-material workflow
+    lib/db/              SQLite client, migrations v1-v7, FTS
+    styles/              tokens, shell, feature styles
+  src-tauri/             native commands, tray, windows, capabilities
+  docs/                  database, backup, release documentation
 ```
 
-## Database / 数据库说明
+## Database / 数据库
 
-The local SQLite database is configured as `sqlite:civicforge.db` through the Tauri SQL plugin. On Tauri startup, the app attempts to:
+The desktop database is `sqlite:civicforge.db`. Migrations v1-v3 preserve the original material/rewrite/review model. Migrations v4-v8 add the 2.0 learning model, FTS5 indexes, and a compatibility repair for legacy material search triggers.
 
-1. Load the SQLite database.
-2. Run schema migrations.
-3. Seed built-in topics and question types.
-4. Read active/draft materials, Rewrite history, and app settings through repository layers.
-5. Save future materials, Rewrite history, and settings back to SQLite.
-6. Fall back to browser `localStorage` when Tauri runtime is unavailable.
+桌面数据库为 `sqlite:civicforge.db`。v1-v3 保留旧版素材、Rewrite 和复习数据；v4-v8 新增 2.0 学习模型、FTS5 索引，并修复旧版素材搜索触发器。旧表不会在升级时删除。
 
-本地 SQLite 数据库通过 Tauri SQL 插件配置为 `sqlite:civicforge.db`。在 Tauri runtime 中启动时，应用会尝试加载数据库、执行迁移、写入内置主题与题型，并通过 repository 读写素材、Rewrite 历史和应用设置。普通 `npm run dev` 浏览器预览没有 Tauri runtime，因此会回退到 localStorage。
+Migration execution uses a single native SQLite connection and a transaction. A failed migration rolls back instead of leaving a partial schema.
 
-Core tables:
+迁移通过原生单连接事务执行；任意语句失败都会回滚，不留下半完成表结构。
 
-- `materials`
-- `review_logs`
-- `rewrite_logs`
-- `topics`
-- `tags`
-- `material_tags`
-- `question_types`
-- `material_question_types`
-- `settings`
-- `materials_fts`
-- `schema_migrations`
-
-See [docs/database.md](docs/database.md) for details.
+See [docs/database.md](docs/database.md).
 
 ## Backup And Restore / 备份与恢复
 
-The current app supports portable JSON archive export and restore from the Import/Export page. In Tauri runtime, export/restore uses official dialog and filesystem plugins; browser preview keeps Blob download, file input, and paste fallback. The archive contains:
+Use the Import/Export page to create a portable JSON archive. Archive v3 includes legacy materials, review and Rewrite logs, settings, plus the complete 2.0 learning workspace. Archives v1 and v2 remain importable.
 
-- Material state
-- Rewrite history
-- App settings
-- Archive version and export timestamp
+在导入导出页可创建便携 JSON 归档。archive v3 包含旧版素材、复习日志、Rewrite 历史、设置以及完整的 2.0 学习工作区，并继续兼容导入 v1、v2 备份。
 
-当前应用已支持在导入导出页生成和恢复 JSON 备份。Tauri runtime 中优先使用官方 dialog/fs 插件；浏览器预览保留下载、文件输入和粘贴回退。备份内容包含素材状态、Rewrite 历史、应用设置、归档版本号和导出时间。SQLite 文件级备份仍保留为后续增强项。
+Before major upgrades, keep both the JSON archive and the local SQLite database file. See [docs/backup-restore.md](docs/backup-restore.md).
 
-See [docs/backup-restore.md](docs/backup-restore.md) for the longer backup strategy.
+重大升级前建议同时保留 JSON 归档和本地 SQLite 数据库文件，详细说明见 [docs/backup-restore.md](docs/backup-restore.md)。
 
-## Current Modules / 当前模块
+## Windows Widget / Windows 桌面小组件
 
-Completed:
+Open Settings and enable the study widget. It provides today’s next task, a daily knowledge card, and quick capture. The main window and widget share SQLite and synchronize through lightweight entity-change events.
 
-- Dashboard: local study summary, review count, quick entry points.
-- Library: material list, filters, metadata inspector, Markdown editor.
-- Editor: Milkdown CommonMark editor with Markdown source fallback.
-- Review: Again / Hard / Good / Easy scheduler, due queue, today count.
-- Rewrite: template-based rewrite workshop, prompt generation, history, save as material.
-- Tags/Themes: built-in topic, material type, question type, and tag statistics.
-- Import/Export: JSON archive preview, download, paste/file restore.
-- Settings/Backup: theme mode, backup preference, storage status, sample reset.
-- SQLite layer: migrations, seed data, repository mapping, startup wiring with fallback.
-- Desktop data closure: SQLite persistence for materials, Rewrite logs, and settings; Tauri-native archive save/open.
+在设置页开启学习小组件后，可查看下一项任务、每日一卡并快速记录。主窗口和小组件共享 SQLite，通过轻量实体变更事件同步，不传输整份数据库快照。
 
-已完成：
+The widget can remember its position and supports compact, always-on-top, and privacy modes. Autostart remains off by default.
 
-- Dashboard：学习概览、复习数量、快速入口。
-- 素材库：素材列表、搜索筛选、属性面板、Markdown 编辑。
-- 编辑器：Milkdown CommonMark 编辑器和 Markdown 源码兜底。
-- 复习：Again / Hard / Good / Easy、到期队列、今日待复习数量。
-- Rewrite：模板化改写工坊、提示词生成、历史保存、结果保存为素材。
-- 主题标签：内置主题、素材类型、适用题型和标签统计。
-- 导入导出：JSON 备份预览、下载、粘贴/文件恢复。
-- 设置备份：主题模式、备份偏好、存储状态、示例数据重置。
-- SQLite 层：迁移、内置数据 seed、仓储映射、启动接入和预览回退。
-- 桌面数据闭环：素材、Rewrite 历史和设置落到 SQLite，导入导出优先走 Tauri 本地文件能力。
+小组件支持位置记忆、紧凑模式、置顶和隐私模式；开机启动默认关闭。

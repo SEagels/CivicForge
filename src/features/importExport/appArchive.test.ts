@@ -31,7 +31,7 @@ describe("app archive", () => {
       exportedAt,
     );
 
-    expect(archive).toEqual({
+    expect(archive).toEqual(expect.objectContaining({
       appName: "CivicForge",
       version: CIVICFORGE_ARCHIVE_VERSION,
       exportedAt: "2026-05-23T10:20:30.000Z",
@@ -42,7 +42,8 @@ describe("app archive", () => {
         themeMode: "dark",
         backupReminderEnabled: false,
       },
-    });
+    }));
+    expect(archive.learningWorkspace.cards).toHaveLength(materialsState.materials.length);
   });
 
   it("serializes and parses a valid archive", () => {

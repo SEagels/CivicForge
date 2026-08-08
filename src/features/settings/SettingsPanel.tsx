@@ -1,5 +1,10 @@
+import { useState } from "react";
 import type { AppSettings, ThemeMode } from "./appSettings";
 import { getStorageDiagnostics, type StorageDiagnosticMode } from "./storageDiagnostics";
+import {
+  loadWidgetPreferences,
+  saveWidgetPreferences,
+} from "../widget/widgetPreferences";
 
 export interface SettingsPanelProps {
   readonly settings: AppSettings;
@@ -22,6 +27,9 @@ export function SettingsPanel({
   onOpenImportExport,
   onResetExamples,
 }: SettingsPanelProps) {
+  const [widgetPreferences, setWidgetPreferences] = useState(() =>
+    loadWidgetPreferences(typeof window === "undefined" ? null : window.localStorage),
+  );
   const updateThemeMode = (themeMode: ThemeMode) => {
     onSettingsChange({ ...settings, themeMode });
   };
@@ -36,6 +44,21 @@ export function SettingsPanel({
     rewriteLogCount,
     backupReminderEnabled: settings.backupReminderEnabled,
   });
+
+  const updateWidget = (patch: Partial<typeof widgetPreferences>) => {
+    const next = { ...widgetPreferences, ...patch };
+    setWidgetPreferences(next);
+    saveWidgetPreferences(typeof window === "undefined" ? null : window.localStorage, next);
+  };
+
+  const showWidget = async () => {
+    if (!("__TAURI_INTERNALS__" in globalThis)) return;
+    const { getAllWindows } = await import("@tauri-apps/api/window");
+    const widget = (await getAllWindows()).find((window) => window.label === "study-widget");
+    await widget?.setAlwaysOnTop(widgetPreferences.alwaysOnTop);
+    await widget?.show();
+    await widget?.setFocus();
+  };
 
   return (
     <section className="settings-workspace" aria-label="设置与备份">
@@ -79,6 +102,26 @@ export function SettingsPanel({
             <p>{diagnostics.storageDescription}</p>
             <p>{diagnostics.summary}</p>
           </div>
+        </section>
+
+        <section className="settings-section">
+          <h2>Windows 学习小组件</h2>
+          <label className="switch-row inline-switch">
+            <input type="checkbox" checked={widgetPreferences.compact} onChange={(event) => updateWidget({ compact: event.target.checked })} />
+            <span>紧凑模式</span>
+          </label>
+          <label className="switch-row inline-switch">
+            <input type="checkbox" checked={widgetPreferences.alwaysOnTop} onChange={(event) => updateWidget({ alwaysOnTop: event.target.checked, alwaysOnBottom: false })} />
+            <span>保持置顶</span>
+          </label>
+          <label className="switch-row inline-switch">
+            <input type="checkbox" checked={widgetPreferences.privacyMode} onChange={(event) => updateWidget({ privacyMode: event.target.checked })} />
+            <span>隐私模式（隐藏任务与卡片正文）</span>
+          </label>
+          <button type="button" className="primary-button" onClick={() => void showWidget()}>
+            显示学习小组件
+          </button>
+          <p className="muted">开机启动暂不默认开启，可通过系统启动项管理。</p>
         </section>
 
         <section className="settings-section">

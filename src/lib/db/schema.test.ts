@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_SCHEMA_SQL, REQUIRED_TABLES } from "./schema";
 import { DATABASE_MIGRATIONS } from "./migrations";
+import {
+  KNOWLEDGE_CARDS_MIGRATION_SQL,
+  LEARNING_SEARCH_MIGRATION_SQL,
+  MATERIALS_FTS_TRIGGER_FIX_SQL,
+  REVIEW_CARDS_MIGRATION_SQL,
+  SOURCE_AND_PRACTICE_MIGRATION_SQL,
+} from "./learningMigrations";
 
 describe("SQLite schema", () => {
   it("creates every required phase-one table", () => {
@@ -37,7 +44,7 @@ describe("SQLite schema", () => {
   });
 
   it("registers migrations with stable versions", () => {
-    expect(DATABASE_MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3]);
+    expect(DATABASE_MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(DATABASE_MIGRATIONS[0]).toMatchObject({
       version: 1,
       name: "initial_schema",
@@ -52,5 +59,50 @@ describe("SQLite schema", () => {
       version: 3,
       name: "review_log_active_recall",
     });
+    expect(DATABASE_MIGRATIONS[3]).toMatchObject({ version: 4, name: "source_and_practice" });
+    expect(DATABASE_MIGRATIONS[4]).toMatchObject({ version: 5, name: "knowledge_cards" });
+    expect(DATABASE_MIGRATIONS[5]).toMatchObject({
+      version: 6,
+      name: "review_cards_and_study_sessions",
+    });
+    expect(DATABASE_MIGRATIONS[6]).toMatchObject({ version: 7, name: "learning_search_v2" });
+    expect(DATABASE_MIGRATIONS[7]).toMatchObject({ version: 8, name: "fix_materials_fts_triggers" });
+  });
+
+  it("creates the v2 learning workflow tables without removing legacy tables", () => {
+    for (const table of [
+      "source_documents",
+      "source_excerpts",
+      "exercises",
+      "attempts",
+      "attempt_revisions",
+      "feedback_records",
+    ]) {
+      expect(SOURCE_AND_PRACTICE_MIGRATION_SQL).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
+    }
+
+    for (const table of ["knowledge_cards", "card_sources", "card_tags", "card_question_types", "card_usages"]) {
+      expect(KNOWLEDGE_CARDS_MIGRATION_SQL).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
+    }
+
+    for (const table of ["review_cards", "study_sessions", "study_session_items"]) {
+      expect(REVIEW_CARDS_MIGRATION_SQL).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
+    }
+
+    expect(KNOWLEDGE_CARDS_MIGRATION_SQL).toContain("FROM materials");
+    expect(REVIEW_CARDS_MIGRATION_SQL).toContain("ALTER TABLE review_logs ADD COLUMN review_card_uuid");
+    expect([...DATABASE_MIGRATIONS].every((migration) => !migration.sql.includes("DROP TABLE"))).toBe(true);
+  });
+
+  it("creates FTS5 indexes for sources, knowledge cards, and exercises", () => {
+    expect(LEARNING_SEARCH_MIGRATION_SQL).toContain("source_documents_fts USING fts5");
+    expect(LEARNING_SEARCH_MIGRATION_SQL).toContain("knowledge_cards_fts USING fts5");
+    expect(LEARNING_SEARCH_MIGRATION_SQL).toContain("exercises_fts USING fts5");
+  });
+
+  it("repairs legacy material FTS triggers with normal row deletion", () => {
+    expect(MATERIALS_FTS_TRIGGER_FIX_SQL).toContain("DELETE FROM materials_fts WHERE rowid = old.id");
+    expect(MATERIALS_FTS_TRIGGER_FIX_SQL).not.toContain("VALUES ('delete'");
+    expect(MATERIALS_FTS_TRIGGER_FIX_SQL).toContain("SELECT id, title, content_md, excerpt, search_keywords FROM materials");
   });
 });
